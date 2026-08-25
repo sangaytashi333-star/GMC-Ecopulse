@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { Navbar } from './components/Navbar';
+import React, { useState, useEffect } from 'react';
+import { Navbar, NavTabId } from './components/Navbar';
 import { CityPulseDashboard } from './components/CityPulseDashboard';
 import { InteractiveEcoMap } from './components/InteractiveEcoMap';
 import { MissionsHub } from './components/MissionsHub';
 import { StewardshipProfile } from './components/StewardshipProfile';
 import { RewardsMarketplace } from './components/RewardsMarketplace';
 import { AdminPortal } from './components/AdminPortal';
+import { AuthScreen } from './components/AuthScreen';
 import { ActiveReportingModal } from './components/ActiveReportingModal';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { 
@@ -30,12 +31,25 @@ import {
 } from './types';
 import { playMindfulChime, toggleSoundMute, isSoundMuted } from './utils/audio';
 
+const STORAGE_AUTH_KEY = 'gmc_citizen_auth_user';
+
 export default function App() {
-  const [currentView, setCurrentView] = useState<'dashboard' | 'map' | 'missions' | 'marketplace' | 'profile' | 'admin'>('dashboard');
+  const [currentView, setCurrentView] = useState<NavTabId>('dashboard');
   const [reports, setReports] = useState<CitizenReport[]>(INITIAL_REPORTS);
   const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS);
   const [rewards, setRewards] = useState<RewardItem[]>(INITIAL_REWARDS);
-  const [user, setUser] = useState<UserProfile>(INITIAL_USER);
+  
+  // Persisted or default citizen profile
+  const [user, setUser] = useState<UserProfile>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_AUTH_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn('Storage read error:', e);
+    }
+    return INITIAL_USER;
+  });
+
   const [metrics, setMetrics] = useState<CityMetrics>(INITIAL_CITY_METRICS);
   const [cityInsight, setCityInsight] = useState<CityInsight>(INITIAL_CITY_INSIGHT);
   const [fieldTeams, setFieldTeams] = useState<FieldTeam[]>(INITIAL_FIELD_TEAMS);
@@ -75,13 +89,22 @@ export default function App() {
     }
   ]);
 
+  // Persist user changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_AUTH_KEY, JSON.stringify(user));
+    } catch (e) {
+      console.warn('Storage write error:', e);
+    }
+  }, [user]);
+
   const handleSoundToggle = () => {
     const nextState = toggleSoundMute();
     setSoundOn(nextState);
     if (nextState) playMindfulChime('bell');
   };
 
-  const handleNavigate = (view: 'dashboard' | 'map' | 'missions' | 'marketplace' | 'profile' | 'admin') => {
+  const handleNavigate = (view: NavTabId) => {
     setCurrentView(view);
     window.scrollTo({ top: 0, behavior: 'smooth' });
     playMindfulChime('bell');
@@ -92,6 +115,49 @@ export default function App() {
     setCurrentView('map');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     playMindfulChime('bell');
+  };
+
+  // Auth Handlers
+  const handleLoginSuccess = (authenticatedUser: UserProfile) => {
+    setUser(authenticatedUser);
+    setCurrentView('dashboard');
+    playMindfulChime('karma');
+
+    const notifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setNotifications(prev => [
+      {
+        id: notifId,
+        title: 'Citizen Session Active',
+        message: `Tashi Delek, ${authenticatedUser.name}! Profile connected.`,
+        time: 'Just now',
+        read: false
+      },
+      ...prev
+    ]);
+  };
+
+  const handleLogout = () => {
+    playMindfulChime('bell');
+    const guestUser: UserProfile = {
+      name: 'Guest Steward',
+      email: 'guest@gmc.bt',
+      role: 'citizen',
+      levelTitle: 'Visiting Pilgrim',
+      levelNumber: 1,
+      totalKarmaPoints: 50,
+      spendablePoints: 50,
+      totalReportsCount: 0,
+      totalMissionsCount: 0,
+      wasteRemovedKg: 0,
+      wildlifeObservedCount: 0,
+      cleanEnergyCreditsKwh: 0,
+      treesPlanted: 0,
+      currentStreakDays: 1,
+      joinedDate: 'Today',
+      badges: []
+    };
+    setUser(guestUser);
+    setCurrentView('auth');
   };
 
   // Submit new report
@@ -307,6 +373,8 @@ export default function App() {
         onToggleSound={handleSoundToggle}
         notifications={notifications}
         onOpenReportModal={() => setIsReportingModalOpen(true)}
+        onOpenAuthModal={() => handleNavigate('auth')}
+        onLogout={handleLogout}
       />
 
       {/* Main Viewport Container */}
@@ -382,6 +450,15 @@ export default function App() {
           />
         )}
 
+        {/* 7. Dedicated Citizen Authentication Screen */}
+        {currentView === 'auth' && (
+          <AuthScreen
+            currentUser={user}
+            onLoginSuccess={handleLoginSuccess}
+            onCancel={() => handleNavigate('dashboard')}
+          />
+        )}
+
       </main>
 
       {/* Mindful Footer */}
@@ -405,6 +482,12 @@ export default function App() {
               className="hover:text-[#1b4332] font-semibold transition"
             >
               Living Atlas
+            </button>
+            <button
+              onClick={() => handleNavigate('auth')}
+              className="hover:text-[#1b4332] font-semibold transition text-[#2d6a4f]"
+            >
+              Citizen Sign In
             </button>
             <button
               onClick={() => handleNavigate('admin')}

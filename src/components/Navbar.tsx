@@ -15,13 +15,16 @@ import {
   X, 
   Bell, 
   Heart,
-  CheckCircle2
+  CheckCircle2,
+  LogIn,
+  LogOut,
+  ChevronDown
 } from 'lucide-react';
 import { UserProfile, CityMetrics } from '../types';
 import { INITIAL_CITY_METRICS, INITIAL_USER_PROFILE } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
 
-export type NavTabId = 'dashboard' | 'map' | 'missions' | 'marketplace' | 'profile' | 'admin';
+export type NavTabId = 'dashboard' | 'map' | 'missions' | 'marketplace' | 'profile' | 'admin' | 'auth';
 
 interface NavbarProps {
   currentTab?: NavTabId;
@@ -35,6 +38,8 @@ interface NavbarProps {
   onToggleSound?: () => void;
   notifications?: Array<{ id: string; title: string; message: string; time: string; read: boolean }>;
   onOpenReportModal: () => void;
+  onOpenAuthModal?: () => void;
+  onLogout?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -49,10 +54,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleSound,
   notifications = [],
   onOpenReportModal,
+  onOpenAuthModal,
+  onLogout,
 }) => {
   const activeView = currentView || currentTab || 'dashboard';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   const effectivePoints = userPoints !== undefined ? userPoints : user?.spendablePoints ?? INITIAL_USER_PROFILE.spendablePoints;
   const userRank = user?.levelNumber ?? INITIAL_USER_PROFILE.levelNumber;
@@ -68,6 +76,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       setCurrentTab(tab);
     }
     setMobileMenuOpen(false);
+    setUserDropdownOpen(false);
   };
 
   const navItems = [
@@ -209,6 +218,85 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             </div>
 
+            {/* Citizen Auth Dropdown / Login Button */}
+            <div className="relative">
+              {user ? (
+                <button
+                  id="btn-user-menu"
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center space-x-2 px-2.5 py-1.5 rounded-lg bg-[#2d6a4f]/60 hover:bg-[#2d6a4f] border border-[#52b788]/30 transition text-left"
+                >
+                  <div className="w-6 h-6 rounded-full bg-[#52b788] text-[#081c15] flex items-center justify-center font-extrabold text-[11px]">
+                    {user.name ? user.name[0].toUpperCase() : 'S'}
+                  </div>
+                  <div className="hidden lg:block text-left leading-none pr-1">
+                    <span className="block text-xs font-bold text-white truncate max-w-[90px]">{user.name}</span>
+                    <span className="text-[9px] text-[#95d5b2]">Lvl {user.levelNumber}</span>
+                  </div>
+                  <ChevronDown className="w-3.5 h-3.5 text-[#d8f3dc]/70" />
+                </button>
+              ) : (
+                <button
+                  id="btn-login-header"
+                  onClick={() => handleNavClick('auth')}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#52b788]/20 hover:bg-[#52b788]/30 text-[#d8f3dc] border border-[#52b788]/40 text-xs font-bold transition"
+                >
+                  <LogIn className="w-3.5 h-3.5 text-[#74c69d]" />
+                  <span>Sign In</span>
+                </button>
+              )}
+
+              {/* User Dropdown Menu */}
+              {userDropdownOpen && user && (
+                <div className="absolute right-0 mt-2 w-64 bg-white text-[#1c2826] rounded-2xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2">
+                  <div className="p-2.5 rounded-xl bg-[#f4f9f5] border border-[#d8f3dc] mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-full bg-[#2d6a4f] text-white flex items-center justify-center font-bold text-sm">
+                        {user.name ? user.name[0].toUpperCase() : 'S'}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-xs text-[#1b4332] truncate">{user.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{user.email || 'sangaytashi.333@gmail.com'}</p>
+                      </div>
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-gray-200/60 flex items-center justify-between text-[10px]">
+                      <span className="text-gray-600">{user.levelTitle}</span>
+                      <span className="font-bold text-[#2d6a4f]">Lvl {user.levelNumber}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 text-xs">
+                    <button
+                      onClick={() => handleNavClick('profile')}
+                      className="w-full px-3 py-2 rounded-lg text-left hover:bg-gray-100 flex items-center space-x-2 text-gray-700 font-semibold transition"
+                    >
+                      <User className="w-4 h-4 text-[#2d6a4f]" />
+                      <span>My Stewardship Impact</span>
+                    </button>
+                    <button
+                      onClick={() => handleNavClick('auth')}
+                      className="w-full px-3 py-2 rounded-lg text-left hover:bg-gray-100 flex items-center space-x-2 text-gray-700 font-semibold transition"
+                    >
+                      <LogIn className="w-4 h-4 text-[#2d6a4f]" />
+                      <span>Switch / Sign In Account</span>
+                    </button>
+                    {onLogout && (
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          onLogout();
+                        }}
+                        className="w-full px-3 py-2 rounded-lg text-left hover:bg-red-50 text-red-600 flex items-center space-x-2 font-semibold transition"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Sign Out</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Report CTA Button */}
             <button
               id="btn-report-observation"
@@ -261,9 +349,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
               );
             })}
+            
+            {/* Mobile Auth Button */}
+            <button
+              onClick={() => handleNavClick('auth')}
+              className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-lg text-sm font-semibold text-[#d8f3dc] hover:bg-[#2d6a4f]/50 border-t border-[#2d6a4f]/30 mt-2"
+            >
+              <LogIn className="w-4 h-4 text-[#74c69d]" />
+              <span>{user ? `Citizen: ${user.name} (Switch)` : 'Sign In / Register'}</span>
+            </button>
           </div>
         )}
       </div>
     </header>
   );
 };
+
