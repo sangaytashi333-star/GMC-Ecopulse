@@ -1,0 +1,11 @@
+{
+  "name": "Gelephu Ecopulse",
+  "description": "Mindful environmental stewardship and urban harmony platform for Gelephu Mindfulness City (GMC).",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
