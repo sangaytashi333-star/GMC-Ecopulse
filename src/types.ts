@@ -42,17 +42,22 @@ export interface AIAnalysisResult {
 export interface ResolutionEvidence {
   fixerName: string;
   fixerEmail?: string;
-  fixDescription: string;
+  fixDescription?: string;
+  description?: string;
   afterPhotoUrl?: string;
   beforePhotoUrl?: string;
-  timestamp: string;
+  timestamp?: string;
+  fixedAt?: string;
   wasteWeightKg?: number;
+  wasteCollectedKg?: number;
   treesRestored?: number;
-  proposedBonusPoints: number;
+  proposedBonusPoints?: number;
+  pointsAwarded?: number;
   officialNotes?: string;
   verifiedByOfficial?: string;
   verifiedAt?: string;
   isApproved?: boolean;
+  isVerifiedByHQ?: boolean;
 }
 
 export interface CitizenReport {
@@ -136,18 +141,24 @@ export interface RedeemedVoucher {
   location?: string;
 }
 
+export type BadgeCategory = 'all' | 'karma' | 'forest' | 'waste' | 'wildlife' | 'river' | 'energy' | 'resolution' | 'community' | 'mastery';
+export type BadgeTier = 'bronze' | 'silver' | 'gold' | 'diamond' | 'mythic';
+
 export interface Badge {
   id: string;
   name: string;
   description: string;
   iconName: string;
-  category: 'river' | 'wildlife' | 'waste' | 'energy' | 'community' | 'mastery';
-  tier: 'bronze' | 'silver' | 'gold' | 'diamond';
+  category: 'karma' | 'forest' | 'waste' | 'wildlife' | 'river' | 'energy' | 'resolution' | 'community' | 'mastery';
+  tier: 'bronze' | 'silver' | 'gold' | 'diamond' | 'mythic';
   progress: number;
   maxProgress: number;
   isUnlocked: boolean;
   unlockedAt?: string;
   sealCode: string;
+  rarity?: 'Common' | 'Rare' | 'Epic' | 'Legendary' | 'Sacred 108';
+  metricUnit?: string;
+  perk?: string;
 }
 
 export interface UserProfile {
@@ -160,6 +171,12 @@ export interface UserProfile {
   spendablePoints: number;
   totalReportsCount: number;
   totalMissionsCount: number;
+  reportsResolvedCount?: number;
+  missionsCompleted?: number;
+  stats?: {
+    reportsResolved?: number;
+    reportsSubmitted?: number;
+  };
   wasteRemovedKg: number;
   wildlifeObservedCount: number;
   cleanEnergyCreditsKwh: number;
@@ -171,6 +188,8 @@ export interface UserProfile {
   specialty?: string;
   preferredSector?: string;
   avatarEmoji?: string;
+  avatarUrl?: string; // Custom uploaded profile photo (data URL / image URL)
+  pinnedBadgeId?: string; // Pinned medal displayed with badge ribbon
   phone?: string;
 }
 
@@ -213,4 +232,32 @@ export interface CityInsight {
   focusSector: string;
   priorityAction: string;
   updatedAt?: string;
+}
+
+export interface Project108Bridge {
+  id: string;
+  bridgeNumber: number;
+  name: string;
+  sacredSymbol: string;
+  mindfulnessTheme: string;
+  sector: string;
+  coordinates: Coordinates;
+  elevationM: number;
+  architecturalType: 'Timber Habitat Overpass' | 'Hydro-Spine Cable' | 'Sacred Geometry Promenade' | 'Bamboo Biophilic Viaduct' | 'Mindfulness Meditation Span';
+  ecologicalFunction: string;
+  sensorNodeId: string;
+  wildlifeCrossingsToday: number;
+  acousticMindfulnessDb: number;
+  purityIndex: number;
+  aiDiagnosticNote: string;
+}
+
+export interface Project108AiMessage {
+  id: string;
+  sender: 'user' | 'assistant';
+  text: string;
+  timestamp: string;
+  relatedBridgeNumber?: number;
+  mindfulBlessing?: string;
+  suggestedAction?: string;
 }

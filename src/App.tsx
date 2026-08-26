@@ -34,21 +34,26 @@ import {
 } from './types';
 import { playMindfulChime, toggleSoundMute, isSoundMuted } from './utils/audio';
 import { useLiveLocation } from './hooks/useLiveLocation';
+import gmcMindfulMistBg from './assets/images/gmc_mindful_mist_bg_1787762128131.jpg';
+import gmc108MandalaBg from './assets/images/gmc_108_mandala_bg_1787762140396.jpg';
 
 const STORAGE_AUTH_KEY = 'gmc_citizen_auth_user';
 const SESSION_AUTH_KEY = 'gmc_citizen_session_authenticated';
 
 export default function App() {
-  // Enforce authentic login first when opening the application
+  // Enforce authentic citizen profile state (default active so user directly lands on live map)
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      return sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
+      if (sessionStorage.getItem('gmc_citizen_logged_out') === 'true') {
+        return false;
+      }
+      return true;
     } catch {
-      return false;
+      return true;
     }
   });
 
-  const [currentView, setCurrentView] = useState<NavTabId>('dashboard');
+  const [currentView, setCurrentView] = useState<NavTabId>('map');
   const [reports, setReports] = useState<CitizenReport[]>(INITIAL_REPORTS);
   const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS);
   const [rewards, setRewards] = useState<RewardItem[]>(INITIAL_REWARDS);
@@ -123,6 +128,11 @@ export default function App() {
     }
   }, [user]);
 
+  // Scroll to top on view changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView]);
+
   const handleSoundToggle = () => {
     const nextState = toggleSoundMute();
     setSoundOn(nextState);
@@ -190,13 +200,23 @@ export default function App() {
     setReports(prev => [newReport, ...prev]);
 
     // Update user profile impact
-    setUser(prev => ({
-      ...prev,
-      spendablePoints: prev.spendablePoints + newReport.pointsAwarded,
-      totalKarmaPoints: prev.totalKarmaPoints + newReport.pointsAwarded,
-      wildlifeObservedCount: newReport.category === 'wildlife' ? prev.wildlifeObservedCount + 1 : prev.wildlifeObservedCount,
-      wasteRemovedKg: newReport.category === 'waste' ? prev.wasteRemovedKg + 12 : prev.wasteRemovedKg,
-    }));
+    setUser(prev => {
+      const currentStats = prev.stats || {};
+      const currentReports = prev.totalReportsCount || 0;
+      return {
+        ...prev,
+        spendablePoints: (prev.spendablePoints || 0) + newReport.pointsAwarded,
+        totalKarmaPoints: (prev.totalKarmaPoints || 0) + newReport.pointsAwarded,
+        totalReportsCount: currentReports + 1,
+        wildlifeObservedCount: newReport.category === 'wildlife' ? (prev.wildlifeObservedCount || 0) + 1 : (prev.wildlifeObservedCount || 0),
+        wasteRemovedKg: newReport.category === 'waste' ? (prev.wasteRemovedKg || 0) + 12 : (prev.wasteRemovedKg || 0),
+        stats: {
+          ...currentStats,
+          reportsSubmitted: (currentStats.reportsSubmitted || currentReports) + 1,
+          reportsResolved: currentStats.reportsResolved || prev.reportsResolvedCount || 0
+        }
+      };
+    });
 
     // Add Notification
     const notifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -222,13 +242,17 @@ export default function App() {
           
           if (joined) {
             // Give steward participation karma
-            setUser(u => ({
-              ...u,
-              spendablePoints: u.spendablePoints + m.rewardPoints,
-              totalKarmaPoints: u.totalKarmaPoints + m.rewardPoints,
-              missionsCompleted: u.missionsCompleted + 1,
-              treesPlanted: m.category === 'revegetation' ? u.treesPlanted + 5 : u.treesPlanted
-            }));
+            setUser(u => {
+              const currentMissions = u.totalMissionsCount || u.missionsCompleted || 0;
+              return {
+                ...u,
+                spendablePoints: (u.spendablePoints || 0) + m.rewardPoints,
+                totalKarmaPoints: (u.totalKarmaPoints || 0) + m.rewardPoints,
+                totalMissionsCount: currentMissions + 1,
+                missionsCompleted: currentMissions + 1,
+                treesPlanted: m.category === 'revegetation' ? (u.treesPlanted || 0) + 5 : (u.treesPlanted || 0)
+              };
+            });
 
             const joinNotifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
             setNotifications(n => [
@@ -389,15 +413,20 @@ export default function App() {
     );
 
     // If current logged-in user is the fixer (or in local prototype session), award the Karma points
-    setUser(u => ({
-      ...u,
-      spendablePoints: u.spendablePoints + bonusPoints,
-      totalKarmaPoints: u.totalKarmaPoints + bonusPoints,
-      stats: {
-        ...u.stats,
-        reportsResolved: (u.stats.reportsResolved || 0) + 1
-      }
-    }));
+    setUser(u => {
+      const prevStats = u.stats || {};
+      const currentResolved = prevStats.reportsResolved ?? u.reportsResolvedCount ?? 0;
+      return {
+        ...u,
+        spendablePoints: (u.spendablePoints || 0) + bonusPoints,
+        totalKarmaPoints: (u.totalKarmaPoints || 0) + bonusPoints,
+        reportsResolvedCount: currentResolved + 1,
+        stats: {
+          ...prevStats,
+          reportsResolved: currentResolved + 1
+        }
+      };
+    });
 
     // Update city telemetry metrics
     setMetrics(m => ({
@@ -634,7 +663,7 @@ export default function App() {
   // If not authenticated, require authentic login first on app open
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#fafaf7] text-[#1c2826] flex flex-col font-sans selection:bg-[#52b788]/30">
+      <div className="min-h-screen bg-gmc-mindful-pattern text-[#192723] flex flex-col font-sans selection:bg-[#52b788]/30">
         <AuthScreen
           currentUser={user}
           onLoginSuccess={handleLoginSuccess}
@@ -645,8 +674,33 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#fafaf7] text-[#1c2826] flex flex-col font-sans selection:bg-[#52b788]/30">
+    <div className="min-h-screen bg-gmc-mindful-pattern text-[#192723] flex flex-col font-sans selection:bg-[#2E7D58]/30 relative overflow-x-hidden">
       
+      {/* Serene Ambient Background Landscape & Sacred 108 Geometry Watermarks */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden select-none">
+        {/* Soft Misty Mountain Ridges */}
+        <img 
+          src={gmcMindfulMistBg} 
+          alt="" 
+          referrerPolicy="no-referrer"
+          className="absolute -top-10 left-0 right-0 w-full h-96 sm:h-[480px] object-cover opacity-12 mix-blend-multiply mask-gradient-b"
+        />
+        {/* Sacred 108 Mandala Watermark at Top Right */}
+        <img 
+          src={gmc108MandalaBg} 
+          alt="" 
+          referrerPolicy="no-referrer"
+          className="absolute -top-12 -right-12 w-80 sm:w-96 h-80 sm:h-96 object-contain opacity-15 mix-blend-multiply"
+        />
+        {/* Sacred 108 Mandala Watermark at Bottom Left */}
+        <img 
+          src={gmc108MandalaBg} 
+          alt="" 
+          referrerPolicy="no-referrer"
+          className="absolute -bottom-16 -left-16 w-80 sm:w-96 h-80 sm:h-96 object-contain opacity-10 mix-blend-multiply rotate-45"
+        />
+      </div>
+
       {/* Top Universal Serene Navigation */}
       <Navbar
         currentView={currentView}
@@ -666,8 +720,8 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Viewport Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-16 md:pb-8">
+      {/* Main Viewport Container with mobile bottom safe space for bottom nav */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-7 pb-24 md:pb-10 relative z-10">
         
         {/* 1. City Pulse Dashboard */}
         {currentView === 'dashboard' && (
@@ -676,6 +730,7 @@ export default function App() {
             reports={reports}
             missions={missions}
             cityInsight={cityInsight}
+            userLocation={userLocation}
             onRefreshInsight={handleRefreshInsight}
             onOpenReportModal={() => {
               setReportInitialCoords(undefined);
@@ -686,6 +741,7 @@ export default function App() {
             onNavigateToMissions={() => handleNavigate('missions')}
             onUpvoteReport={handleUpvoteReport}
             onSelectReport={(report) => setInspectingReport(report)}
+            onJoinMission={handleJoinMission}
           />
         )}
 

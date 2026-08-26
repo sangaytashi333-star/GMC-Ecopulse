@@ -20,12 +20,13 @@ import {
   Crosshair,
   Navigation,
   Globe,
-  Radio
+  Radio,
+  Map as MapIcon
 } from 'lucide-react';
 import { CitizenReport, Mission, Coordinates, LiveLocationState } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
-import { RealLeafletMap } from './RealLeafletMap';
+import { RealLeafletMap, MapTileStyle } from './RealLeafletMap';
 import { calculateDistanceKm, formatDistance, formatCoordinates } from '../utils/geo';
 
 interface InteractiveEcoMapProps {
@@ -60,6 +61,7 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
   onSimulateGMCLocation,
 }) => {
   const [mapEngine, setMapEngine] = useState<'real' | 'schematic'>('real');
+  const [mapTileStyle, setMapTileStyle] = useState<MapTileStyle>('satellite');
   const [selectedSector, setSelectedSector] = useState<string>(initialSectorFilter || 'all');
   const [activeLayerMissions, setActiveLayerMissions] = useState(true);
   const [activeLayerReports, setActiveLayerReports] = useState(true);
@@ -175,12 +177,85 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
         </div>
       </div>
 
+      {/* Map Style Quick Switcher Bar for Real Tile Map */}
+      {mapEngine === 'real' && (
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#f8f9f6] p-3 rounded-2xl border border-gray-200">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-extrabold text-[#1b4332] flex items-center mr-1">
+              <MapIcon className="w-3.5 h-3.5 mr-1.5 text-[#2d6a4f]" /> Base Tile Layer:
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setMapTileStyle('satellite');
+                playMindfulChime('bell');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+                mapTileStyle === 'satellite'
+                  ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>🛰️ Satellite Imagery (Aerial)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMapTileStyle('street');
+                playMindfulChime('bell');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+                mapTileStyle === 'street'
+                  ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>🗺️ Standard Street (OpenStreetMap)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMapTileStyle('voyager');
+                playMindfulChime('bell');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+                mapTileStyle === 'voyager'
+                  ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>🌿 Mindful GIS</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMapTileStyle('topo');
+                playMindfulChime('bell');
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+                mapTileStyle === 'topo'
+                  ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
+              }`}
+            >
+              <span>⛰️ Topographic Elevation</span>
+            </button>
+          </div>
+
+          <div className="text-[11px] text-gray-500 font-medium">
+            {mapTileStyle === 'satellite' ? 'Displaying high-detail satellite view of Gelephu valley' : mapTileStyle === 'street' ? 'Displaying OSM street grid & named roads' : 'Custom GIS terrain layer active'}
+          </div>
+        </div>
+      )}
+
       {/* Real Tile Map (with Leaflet, OSM/Satellite/Topo and Live User GPS) */}
       {mapEngine === 'real' && (
         <RealLeafletMap
           reports={filteredReports}
           missions={filteredMissions}
           userLocation={userLocation}
+          mapStyle={mapTileStyle}
+          onMapStyleChange={setMapTileStyle}
           onSelectReport={onSelectReport}
           onJoinMission={onJoinMission}
           onOpenReportModalWithCoords={onOpenReportModalWithCoords}

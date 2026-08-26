@@ -16,13 +16,16 @@ import {
   Info,
   Loader2,
   Crosshair,
-  Compass
+  Compass,
+  RotateCcw,
+  Image as ImageIcon
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CitizenReport, ReportCategory, AIAnalysisResult, Coordinates, LiveLocationState } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
 import { formatCoordinates } from '../utils/geo';
+import { CameraCaptureView } from './CameraCaptureView';
 
 interface ActiveReportingModalProps {
   isOpen: boolean;
@@ -87,6 +90,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // Real-time geocoordinates
   const [reportCoords, setReportCoords] = useState<Coordinates>(() => {
@@ -157,6 +161,12 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleCameraCaptured = (capturedBase64: string) => {
+    setPhotoUrl(capturedBase64);
+    setIsCameraOpen(false);
+    triggerAIAnalysis(title, description, category, capturedBase64, locationName);
   };
 
   const triggerAIAnalysis = async (
@@ -261,30 +271,30 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#2d6a4f]/20 max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-[#2d6a4f]/20 max-h-[92dvh] overflow-y-auto my-auto">
         
         {/* Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#d8f3dc] text-[#1b4332] flex items-center justify-center font-bold">
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md z-10 px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 flex items-center justify-between">
+          <div className="flex items-center space-x-2.5 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[#d8f3dc] text-[#1b4332] flex items-center justify-center font-bold shrink-0">
               📸
             </div>
-            <div>
-              <h3 className="text-base font-extrabold text-[#1b4332]">Citizen Steward Observation Studio</h3>
-              <p className="text-xs text-gray-500">Report wildlife, hazards, or waste to earn GMC Karma Points</p>
+            <div className="min-w-0">
+              <h3 className="text-sm sm:text-base font-extrabold text-[#1b4332] truncate">Citizen Steward Observation Studio</h3>
+              <p className="text-[11px] sm:text-xs text-gray-500 truncate">Report wildlife, hazards, or waste for GMC Karma</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 sm:space-y-5">
           
           {/* Quick Sample Presets Bar */}
           <div>
@@ -318,7 +328,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
                   type="button"
                   onClick={() => triggerAIAnalysis()}
                   disabled={isAnalyzingAI}
-                  className="px-2.5 py-1 rounded-lg bg-white border border-[#52b788] text-[11px] font-bold text-[#2d6a4f] flex items-center space-x-1 hover:bg-[#d8f3dc]/40"
+                  className="px-2.5 py-1 rounded-lg bg-white border border-[#52b788] text-[11px] font-bold text-[#2d6a4f] flex items-center space-x-1 hover:bg-[#d8f3dc]/40 transition"
                 >
                   <Sparkles className="w-3 h-3 text-[#f4a261]" />
                   <span>{isAnalyzingAI ? 'Scanning...' : 'Scan with Gemini AI'}</span>
@@ -327,32 +337,101 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
             </div>
 
             {photoUrl ? (
-              <div className="relative rounded-xl overflow-hidden border border-gray-200 group">
-                <img
-                  src={photoUrl}
-                  alt="Captured observation"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-44 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => { setPhotoUrl(''); setAiAnalysis(null); }}
-                  className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+              <div className="space-y-2">
+                <div className="relative rounded-2xl overflow-hidden border border-gray-200 group bg-black/5">
+                  <img
+                    src={photoUrl}
+                    alt="Captured observation"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-48 object-cover"
+                  />
+                  <div className="absolute top-2 left-2 px-2.5 py-1 rounded-full bg-[#1b4332]/90 backdrop-blur-md text-white text-[10px] font-bold flex items-center space-x-1">
+                    <CheckCircle2 className="w-3 h-3 text-[#52b788]" />
+                    <span>Photo Attached</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setPhotoUrl(''); setAiAnalysis(null); }}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 text-white hover:bg-black transition shadow-md"
+                    title="Remove Photo"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="flex-1 py-1.5 px-3 rounded-xl bg-white border border-[#52b788] text-[#1b4332] hover:bg-[#d8f3dc]/40 text-xs font-bold transition flex items-center justify-center space-x-1.5"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-[#2d6a4f]" />
+                    <span>Click New Picture</span>
+                  </button>
+
+                  <label className="flex-1 py-1.5 px-3 rounded-xl bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs font-semibold cursor-pointer transition flex items-center justify-center space-x-1.5">
+                    <Upload className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Change File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-6 text-center">
-                <Upload className="w-8 h-8 text-[#2d6a4f] mb-2" />
-                <p className="text-xs font-semibold text-gray-700">Drag & drop photo, or click to upload</p>
-                <p className="text-[11px] text-gray-500">Supports JPG, PNG, WEBP for Gemini ecological classification</p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="mt-3 text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#1b4332] file:text-white hover:file:bg-[#2d6a4f] cursor-pointer"
-                />
+              <div className="flex flex-col items-center justify-center py-5 px-4 text-center bg-white rounded-2xl border border-gray-200 space-y-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-10 h-10 rounded-2xl bg-[#d8f3dc] text-[#1b4332] flex items-center justify-center font-bold">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-xs font-bold text-[#1b4332]">Capture or Upload Photo</h4>
+                  <p className="text-[11px] text-gray-500 max-w-sm mx-auto">
+                    Click a live photo with your camera or select from device for automatic species identification & karma bonus.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-2 w-full pt-1">
+                  {/* Big Primary Click Picture Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="px-4 py-2.5 rounded-xl bg-[#1b4332] hover:bg-[#2d6a4f] text-white text-xs font-extrabold shadow-sm transition flex items-center space-x-2"
+                  >
+                    <Camera className="w-4 h-4 text-[#52b788]" />
+                    <span>Click Picture (Live Camera)</span>
+                  </button>
+
+                  {/* Upload from Gallery / Files */}
+                  <label className="px-3.5 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold cursor-pointer transition flex items-center space-x-1.5 border border-gray-200">
+                    <Upload className="w-3.5 h-3.5 text-gray-600" />
+                    <span>Upload File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Mobile Direct Camera Trigger */}
+                  <label className="px-3.5 py-2.5 rounded-xl bg-[#d8f3dc] hover:bg-[#b7e4c7] text-[#1b4332] text-xs font-bold cursor-pointer transition flex items-center space-x-1.5 sm:hidden">
+                    <Camera className="w-3.5 h-3.5 text-[#1b4332]" />
+                    <span>Device Lens</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             )}
 
@@ -551,6 +630,15 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
         </form>
 
       </div>
+
+      {/* Live Camera Viewfinder Modal */}
+      {isCameraOpen && (
+        <CameraCaptureView
+          title="Click Citizen Observation Photo"
+          onCapture={handleCameraCaptured}
+          onClose={() => setIsCameraOpen(false)}
+        />
+      )}
     </div>
   );
 };

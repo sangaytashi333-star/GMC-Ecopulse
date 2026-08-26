@@ -234,8 +234,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                     className="flex items-center space-x-1.5 sm:space-x-2 px-2 sm:px-2.5 py-1.5 rounded-lg bg-[#2d6a4f]/60 hover:bg-[#2d6a4f] border border-[#52b788]/30 transition text-left min-h-[40px]"
                   >
-                    <div className="w-6 h-6 rounded-full bg-[#52b788] text-[#081c15] flex items-center justify-center font-extrabold text-[11px] shrink-0">
-                      {user.name ? user.name[0].toUpperCase() : 'S'}
+                    <div className="w-6 h-6 rounded-full bg-[#52b788] text-[#081c15] flex items-center justify-center font-extrabold text-[11px] shrink-0 overflow-hidden">
+                      {user.avatarUrl ? (
+                        <img 
+                          src={user.avatarUrl} 
+                          alt={user.name} 
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        user.name ? user.name[0].toUpperCase() : 'S'
+                      )}
                     </div>
                     <div className="hidden lg:block text-left leading-none pr-1">
                       <span className="block text-xs font-bold text-white truncate max-w-[90px]">{user.name}</span>
@@ -259,8 +268,17 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="absolute right-0 mt-2 w-64 bg-white text-[#1c2826] rounded-2xl shadow-2xl border border-gray-100 p-3 z-50 animate-in fade-in slide-in-from-top-2">
                     <div className="p-2.5 rounded-xl bg-[#f4f9f5] border border-[#d8f3dc] mb-2">
                       <div className="flex items-center space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-[#2d6a4f] text-white flex items-center justify-center font-bold text-sm shrink-0">
-                          {user.name ? user.name[0].toUpperCase() : 'S'}
+                        <div className="w-8 h-8 rounded-full bg-[#2d6a4f] text-white flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden">
+                          {user.avatarUrl ? (
+                            <img 
+                              src={user.avatarUrl} 
+                              alt={user.name} 
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            user.name ? user.name[0].toUpperCase() : 'S'
+                          )}
                         </div>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold text-xs text-[#1b4332] truncate">{user.name}</p>

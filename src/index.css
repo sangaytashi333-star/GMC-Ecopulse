@@ -1,1 +1,119 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    /* GMC Ecopulse Official Brand Palette */
+    --gmc-pine: #1E4D3B;
+    --gmc-jade: #2E7D58;
+    --gmc-sage: #6FB68D;
+    --gmc-gold: #DCC79A;
+    --gmc-cream: #F4E9D4;
+    --gmc-earth: #9B6F47;
+    
+    /* Harmonious Neutrals */
+    --gmc-pine-dark: #123326;
+    --gmc-pine-forest: #1E4D3B;
+    --gmc-cypress: #1E4D3B;
+    --gmc-meadow: #2E7D58;
+    --gmc-spring: #6FB68D;
+    --gmc-bamboo: #EAF5EE;
+    --gmc-parchment: #F8F4EB;
+    --gmc-amber: #DCC79A;
+    --gmc-terai-gold: #DCC79A;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: auto;
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    -webkit-tap-highlight-color: transparent;
+    background-color: #F8F5ED;
+  }
+
+  /* Interactive touch targets */
+  button, input, select, textarea, a {
+    touch-action: manipulation;
+  }
+}
+
+/* GMC Ecopulse Mindful 108 Background with Soft Valley Mist & Sacred Geometry */
+.bg-gmc-mindful-pattern {
+  background-color: #F8F5ED;
+  background-image: 
+    radial-gradient(circle at 12% 10%, rgba(111, 182, 141, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 88% 18%, rgba(220, 199, 154, 0.20) 0%, transparent 45%),
+    radial-gradient(circle at 50% 65%, rgba(30, 77, 59, 0.04) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='160' height='160' viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%23DCC79A' stroke-width='0.6' stroke-opacity='0.18' fill='none'%3E%3Ccircle cx='80' cy='80' r='60'/%3E%3Ccircle cx='80' cy='80' r='40' stroke-dasharray='3 3'/%3E%3Ccircle cx='80' cy='80' r='20'/%3E%3Cpath d='M80 20 L80 140 M20 80 L140 80' stroke-opacity='0.12'/%3E%3Cpath d='M37.5 37.5 L122.5 122.5 M37.5 122.5 L122.5 37.5' stroke-opacity='0.10'/%3E%3Cpath d='M80 35 C60 55, 60 75, 80 80 C100 75, 100 55, 80 35 Z' stroke='%232E7D58' stroke-opacity='0.12'/%3E%3Cpath d='M80 125 C60 105, 60 85, 80 80 C100 85, 100 105, 80 125 Z' stroke='%232E7D58' stroke-opacity='0.12'/%3E%3Cpath d='M35 80 C55 60, 75 60, 80 80 C75 100, 55 100, 35 80 Z' stroke='%232E7D58' stroke-opacity='0.12'/%3E%3Cpath d='M125 80 C105 60, 85 60, 80 80 C85 100, 105 100, 125 80 Z' stroke='%232E7D58' stroke-opacity='0.12'/%3E%3C/g%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+/* Serene Himalayan Atmospheric Glass */
+.gmc-card {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(30, 77, 59, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(30, 77, 59, 0.03), 0 2px 6px -1px rgba(30, 77, 59, 0.02);
+}
+
+.gmc-card-accent {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(244, 233, 212, 0.35) 100%);
+  border: 1px solid rgba(220, 199, 154, 0.45);
+  box-shadow: 0 10px 30px -4px rgba(30, 77, 59, 0.05);
+}
+
+/* Bhutanese Gold & Pine Accent Badge */
+.gmc-badge-gold {
+  background: rgba(220, 199, 154, 0.25);
+  color: #1E4D3B;
+  border: 1px solid rgba(220, 199, 154, 0.6);
+}
+
+.gmc-badge-pine {
+  background: rgba(46, 125, 88, 0.12);
+  color: #1E4D3B;
+  border: 1px solid rgba(46, 125, 88, 0.25);
+}
+
+/* Safe Area Inset Classes for Mobile Screens */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Leaflet Map Mobile Container Reset */
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  z-index: 10 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Scrollbar refinement */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(30, 77, 59, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 77, 59, 0.5);
+}

@@ -21,9 +21,10 @@ import {
   Zap,
   Leaf
 } from 'lucide-react';
-import { CityMetrics, CitizenReport, Mission, CityInsight } from '../types';
+import { CityMetrics, CitizenReport, Mission, CityInsight, LiveLocationState } from '../types';
 import { GMC_SECTORS, INITIAL_CITY_METRICS, INITIAL_CITY_INSIGHT, INITIAL_REPORTS, INITIAL_MISSIONS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
+import { RealLeafletMap } from './RealLeafletMap';
 
 interface CityPulseDashboardProps {
   metrics?: CityMetrics;
@@ -32,12 +33,14 @@ interface CityPulseDashboardProps {
   missions?: Mission[];
   activeMissions?: Mission[];
   cityInsight?: CityInsight;
+  userLocation?: LiveLocationState;
   onRefreshInsight?: () => Promise<void>;
   onNavigateToMap: (sectorId?: string) => void;
   onNavigateToMissions: () => void;
   onOpenReportModal: () => void;
   onUpvoteReport?: (reportId: string) => void;
   onSelectReport: (report: CitizenReport) => void;
+  onJoinMission?: (missionId: string) => void;
 }
 
 export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
@@ -47,12 +50,14 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
   missions,
   activeMissions: activeMissionsProp,
   cityInsight = INITIAL_CITY_INSIGHT,
+  userLocation,
   onRefreshInsight,
   onNavigateToMap,
   onNavigateToMissions,
   onOpenReportModal,
   onUpvoteReport,
   onSelectReport,
+  onJoinMission = () => {},
 }) => {
   const [isRefreshingInsight, setIsRefreshingInsight] = useState(false);
   const [selectedVitalTab, setSelectedVitalTab] = useState<'all' | 'air' | 'energy' | 'bio' | 'water'>('all');
@@ -80,27 +85,27 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
     <div className="space-y-8 animate-in fade-in duration-500">
       
       {/* 1. Serene Hero Section: The Living City Heartbeat */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1b4332] via-[#2d6a4f] to-[#1b4332] text-white p-6 sm:p-8 lg:p-10 shadow-lg border border-[#52b788]/20">
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#1E4D3B] via-[#2E7D58] to-[#1E4D3B] text-white p-6 sm:p-8 lg:p-10 shadow-lg border border-[#DCC79A]/30">
         
         {/* Subtle decorative background botanical geometry */}
-        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 rounded-full bg-[#52b788]/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-1/3 -mb-16 w-64 h-64 rounded-full bg-[#40916c]/15 blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-80 h-80 rounded-full bg-[#DCC79A]/15 blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-16 w-64 h-64 rounded-full bg-[#6FB68D]/15 blur-2xl pointer-events-none" />
 
         <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Left Column: Headline & Mindfulness Welcome */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#52b788]/20 border border-[#52b788]/30 text-[#d8f3dc] text-xs font-semibold tracking-wide">
-              <span className="w-2 h-2 rounded-full bg-[#52b788] animate-ping" />
-              <span>Gelephu Mindfulness City • Real-Time Biosphere Telemetry</span>
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#1E4D3B]/60 border border-[#DCC79A]/40 text-[#F4E9D4] text-xs font-semibold tracking-wide backdrop-blur-sm">
+              <span className="w-2 h-2 rounded-full bg-[#6FB68D] animate-ping" />
+              <span>GMC-ecopulse • SENSE • LIVE • THRIVE</span>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
               Harmonizing Nature, Mind & Technology.
             </h1>
 
-            <p className="text-sm sm:text-base text-[#d8f3dc]/85 leading-relaxed max-w-xl font-normal">
-              GMC bridges Gross National Happiness with proactive ecological stewardship. Every observation, river cleanup, and clean commute keeps our Himalayan valley in living equilibrium.
+            <p className="text-sm sm:text-base text-[#F4E9D4]/90 leading-relaxed max-w-xl font-normal">
+              A mindful digital pulse inspired by nature, culture, and the 108 vision. Rooted in Bhutan, designed for the future.
             </p>
 
             {/* Quick Action Pills */}
@@ -108,17 +113,17 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
               <button
                 id="btn-hero-report"
                 onClick={onOpenReportModal}
-                className="px-5 py-2.5 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
+                className="px-5 py-2.5 rounded-xl bg-[#DCC79A] hover:bg-[#ebd7ab] text-[#1E4D3B] font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center space-x-2"
               >
                 <span>📸 Log Ecological Observation</span>
-                <ArrowUpRight className="w-4 h-4" />
+                <ArrowUpRight className="w-4 h-4 text-[#1E4D3B]" />
               </button>
 
               <button
                 onClick={() => onNavigateToMap()}
-                className="px-4 py-2.5 rounded-xl bg-[#2d6a4f]/80 hover:bg-[#2d6a4f] text-[#d8f3dc] border border-[#52b788]/30 font-semibold text-xs sm:text-sm transition flex items-center space-x-2"
+                className="px-4 py-2.5 rounded-xl bg-[#1E4D3B]/80 hover:bg-[#1E4D3B] text-[#F4E9D4] border border-[#DCC79A]/30 font-semibold text-xs sm:text-sm transition flex items-center space-x-2"
               >
-                <Compass className="w-4 h-4 text-[#74c69d]" />
+                <Compass className="w-4 h-4 text-[#6FB68D]" />
                 <span>Explore Eco-Atlas</span>
               </button>
             </div>
@@ -129,27 +134,27 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
             <div className="relative w-52 h-52 sm:w-60 sm:h-60 flex items-center justify-center">
               
               {/* Pulsing Concentric Rings */}
-              <div className="absolute inset-0 rounded-full border-2 border-[#52b788]/20 animate-ping opacity-25" />
-              <div className="absolute inset-3 rounded-full border border-[#74c69d]/30 animate-pulse" />
-              <div className="absolute inset-6 rounded-full bg-gradient-to-tr from-[#1b4332] to-[#2d6a4f] border border-[#52b788]/40 shadow-2xl flex flex-col items-center justify-center text-center p-4">
+              <div className="absolute inset-0 rounded-full border-2 border-[#DCC79A]/20 animate-ping opacity-25" />
+              <div className="absolute inset-3 rounded-full border border-[#6FB68D]/30 animate-pulse" />
+              <div className="absolute inset-6 rounded-full bg-gradient-to-tr from-[#1E4D3B] to-[#2E7D58] border border-[#DCC79A]/40 shadow-2xl flex flex-col items-center justify-center text-center p-4">
                 
-                <div className="flex items-center space-x-1.5 text-[#52b788] mb-1">
+                <div className="flex items-center space-x-1.5 text-[#DCC79A] mb-1">
                   <Activity className="w-4 h-4 animate-bounce" />
-                  <span className="text-[11px] font-bold tracking-wider uppercase text-[#d8f3dc]">City Harmony Index</span>
+                  <span className="text-[11px] font-bold tracking-wider uppercase text-[#F4E9D4]">City Harmony Index</span>
                 </div>
 
                 <div className="flex items-baseline space-x-1">
                   <span className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight">
                     {metrics.harmonyScore.toFixed(1)}
                   </span>
-                  <span className="text-sm font-semibold text-[#52b788]">/100</span>
+                  <span className="text-sm font-semibold text-[#DCC79A]">/100</span>
                 </div>
 
-                <div className="mt-1 px-2.5 py-0.5 rounded-full bg-[#52b788]/25 border border-[#52b788]/40 text-[11px] font-bold text-[#d8f3dc]">
+                <div className="mt-1 px-2.5 py-0.5 rounded-full bg-[#1E4D3B]/60 border border-[#DCC79A]/40 text-[11px] font-bold text-[#F4E9D4]">
                   Optimal Equilibrium ✨
                 </div>
 
-                <p className="mt-1.5 text-[10px] text-[#d8f3dc]/70">
+                <p className="mt-1.5 text-[10px] text-[#F4E9D4]/75">
                   +0.4% from yesterday • 3,840 active stewards
                 </p>
               </div>
@@ -159,13 +164,13 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
         </div>
 
         {/* Bottom Banner Stats Strip */}
-        <div className="mt-8 pt-6 border-t border-[#52b788]/20 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+        <div className="mt-8 pt-6 border-t border-[#DCC79A]/20 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
           <div>
-            <span className="block text-[11px] text-[#d8f3dc]/70">Daily CO₂ Offset</span>
+            <span className="block text-[11px] text-[#F4E9D4]/75">Daily CO₂ Offset</span>
             <span className="text-base font-bold text-white">{metrics.dailyCo2AvoidedTons} tons</span>
           </div>
           <div>
-            <span className="block text-[11px] text-[#d8f3dc]/70">Forest Canopy Cover</span>
+            <span className="block text-[11px] text-[#F4E9D4]/75">Forest Canopy Cover</span>
             <span className="text-base font-bold text-white">{metrics.forestCanopyPercent}%</span>
           </div>
           <div>
@@ -280,6 +285,44 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
 
         </div>
       </section>
+
+      {/* 2.5 Real-Time Living Eco-Atlas & Live GPS Location Section */}
+      {userLocation && (
+        <section className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center space-x-2">
+                <h3 className="text-base font-extrabold text-[#1b4332] tracking-tight">Real-Time Gelephu Eco-Atlas & Live GPS</h3>
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-[#d8f3dc] text-[#1b4332] rounded-full flex items-center space-x-1">
+                  <span className="w-2 h-2 rounded-full bg-[#2d6a4f] animate-ping" />
+                  <span>Real-Time Telemetry</span>
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                Interactive satellite & street GIS layer with citizen observations, wildlife corridors, and real-time GPS tracking.
+              </p>
+            </div>
+            <button
+              onClick={() => onNavigateToMap()}
+              className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-[#1b4332] hover:bg-[#2d6a4f] text-white text-xs font-bold transition flex items-center space-x-1.5 shadow-sm"
+            >
+              <Compass className="w-3.5 h-3.5 text-[#52b788]" />
+              <span>Expand Eco-Atlas Map</span>
+            </button>
+          </div>
+
+          <div className="rounded-3xl overflow-hidden border border-gray-200 shadow-md">
+            <RealLeafletMap
+              reports={allReports}
+              missions={currentActiveMissions}
+              userLocation={userLocation}
+              mapStyle="satellite"
+              onSelectReport={onSelectReport}
+              onJoinMission={onJoinMission}
+            />
+          </div>
+        </section>
+      )}
 
       {/* 3. AI Mindfulness Eco-Digest & Daily Harmony Reflection */}
       <section className="p-6 rounded-2xl bg-gradient-to-r from-[#f4f1de]/70 via-[#f8f9f6] to-[#d8f3dc]/40 border border-[#e2e8f0] shadow-sm">

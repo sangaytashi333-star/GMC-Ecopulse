@@ -35,11 +35,11 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
   const isPendingFixVerification = report.status === 'pending_verification';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in">
-      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      <div className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden max-h-[92dvh] overflow-y-auto my-auto">
         
         {/* Header */}
-        <div className="sticky top-0 bg-white/95 backdrop-blur-md px-6 py-4 border-b border-gray-100 flex items-center justify-between z-10">
+        <div className="sticky top-0 bg-white/95 backdrop-blur-md px-4 sm:px-6 py-3.5 sm:py-4 border-b border-gray-100 flex items-center justify-between z-10">
           <div className="flex items-center space-x-2">
             <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-[#d8f3dc] text-[#1b4332]">
               {report.category}

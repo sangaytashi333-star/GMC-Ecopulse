@@ -16,23 +16,32 @@ import {
 } from 'lucide-react';
 import { CitizenReport, ResolutionEvidence, UserProfile } from '../types';
 import { playMindfulChime } from '../utils/audio';
+import { CameraCaptureView } from './CameraCaptureView';
 
 interface FixResolutionModalProps {
   report: CitizenReport | null;
-  user: UserProfile;
+  user?: UserProfile;
+  currentUserName?: string;
+  currentUserEmail?: string;
   isOpen: boolean;
   onClose: () => void;
-  onSubmitEvidence: (reportId: string, evidence: Omit<ResolutionEvidence, 'isApproved' | 'verifiedByOfficial' | 'verifiedAt'>) => void;
+  onSubmitEvidence: (reportId: string, evidence: ResolutionEvidence) => void;
 }
 
 export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
   report,
   user,
+  currentUserName,
+  currentUserEmail,
   isOpen,
   onClose,
   onSubmitEvidence,
 }) => {
   if (!isOpen || !report) return null;
+
+  const resolvedUserName = currentUserName || user?.name || 'Citizen Steward';
+  const resolvedUserEmail = currentUserEmail || user?.email || 'citizen@gmc.bt';
+  const resolvedUserTitle = user?.levelTitle || 'Mindful Citizen';
 
   const defaultBounty = report.cleanupKarmaBonus || Math.max(150, Math.round((report.pointsAwarded || 100) * 1.8));
 
@@ -43,6 +52,7 @@ export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
     'https://images.unsplash.com/photo-1530587191325-3db32d826c18?auto=format&fit=crop&w=800&q=80'
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   // Realistic After-Photo Evidence Presets
   const EVIDENCE_PRESETS = [
@@ -85,8 +95,8 @@ export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
 
     setTimeout(() => {
       onSubmitEvidence(report.id, {
-        fixerName: user.name,
-        fixerEmail: user.email,
+        fixerName: resolvedUserName,
+        fixerEmail: resolvedUserEmail,
         fixDescription: fixDescription.trim(),
         afterPhotoUrl,
         beforePhotoUrl: report.photoUrl,
@@ -100,32 +110,32 @@ export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-200 max-h-[90vh] overflow-y-auto space-y-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-white rounded-3xl p-4 sm:p-8 shadow-2xl border border-gray-200 max-h-[92dvh] overflow-y-auto space-y-5 sm:space-y-6 my-auto">
         
         {/* Modal Header */}
-        <div className="flex items-start justify-between pb-4 border-b border-gray-100">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
+        <div className="flex items-start justify-between pb-3 sm:pb-4 border-b border-gray-100">
+          <div className="space-y-1 min-w-0 pr-2">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
               <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-[#d8f3dc] text-[#1b4332]">
                 Citizen Field Resolution
               </span>
               <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 flex items-center space-x-1">
-                <Sparkles className="w-3 h-3 text-amber-600" />
+                <Sparkles className="w-3 h-3 text-amber-600 shrink-0" />
                 <span>Earn +{defaultBounty} Karma Points</span>
               </span>
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-[#1b4332]">
+            <h3 className="text-base sm:text-xl font-bold text-[#1b4332]">
               Submit Resolution & Evidence of Fix
             </h3>
-            <p className="text-xs text-gray-500">
+            <p className="text-[11px] sm:text-xs text-gray-500">
               Did you clean up this area or fix the hazard? Upload after-photos to claim your stewardship bounty.
             </p>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition"
+            className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -168,7 +178,7 @@ export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
               <input
                 type="text"
                 disabled
-                value={`${user.name} (${user.levelTitle})`}
+                value={`${resolvedUserName} (${resolvedUserTitle})`}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 font-semibold cursor-not-allowed"
               />
             </div>
@@ -269,16 +279,27 @@ export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
 
               {/* Upload & Presets */}
               <div className="space-y-2">
-                <label className="w-full py-2 px-3 rounded-xl border border-gray-300 hover:bg-gray-50 cursor-pointer flex items-center justify-center space-x-2 text-gray-700 font-semibold transition">
-                  <UploadCloud className="w-4 h-4 text-[#2d6a4f]" />
-                  <span>Upload Camera Snapshot</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCameraOpen(true)}
+                    className="w-full py-2 px-3 rounded-xl bg-[#1b4332] hover:bg-[#2d6a4f] text-white font-bold text-xs flex items-center justify-center space-x-1.5 shadow-sm transition"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-[#52b788]" />
+                    <span>Click Photo</span>
+                  </button>
+
+                  <label className="w-full py-2 px-3 rounded-xl border border-gray-300 hover:bg-gray-50 cursor-pointer flex items-center justify-center space-x-1.5 text-gray-700 font-semibold text-xs transition">
+                    <UploadCloud className="w-3.5 h-3.5 text-[#2d6a4f]" />
+                    <span>Upload File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
 
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-gray-400 uppercase">Or select sample evidence photo:</span>
@@ -341,6 +362,18 @@ export const FixResolutionModal: React.FC<FixResolutionModalProps> = ({
         </form>
 
       </div>
+
+      {/* Live Camera Viewfinder Modal */}
+      {isCameraOpen && (
+        <CameraCaptureView
+          title="Click Resolution After Photo"
+          onCapture={(capturedBase64) => {
+            setAfterPhotoUrl(capturedBase64);
+            setIsCameraOpen(false);
+          }}
+          onClose={() => setIsCameraOpen(false)}
+        />
+      )}
     </div>
   );
 };

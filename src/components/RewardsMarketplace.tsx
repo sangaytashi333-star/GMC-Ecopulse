@@ -287,21 +287,21 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
 
       {/* Confirmation Modal */}
       {confirmReward && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-md bg-white rounded-3xl p-6 shadow-2xl border border-gray-200 space-y-5 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="relative w-full max-w-md bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border border-gray-200 space-y-4 sm:space-y-5 text-center my-auto max-h-[92dvh] overflow-y-auto">
             <button
               onClick={() => setConfirmReward(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-[#d8f3dc] flex items-center justify-center text-3xl shadow-sm">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-[#d8f3dc] flex items-center justify-center text-2xl sm:text-3xl shadow-sm">
               {confirmReward.imageEmoji}
             </div>
 
             <div className="space-y-1">
-              <h3 className="text-lg font-bold text-[#1b4332]">Redeem {confirmReward.title}?</h3>
+              <h3 className="text-base sm:text-lg font-bold text-[#1b4332]">Redeem {confirmReward.title}?</h3>
               <p className="text-xs text-gray-600 leading-relaxed px-2">{confirmReward.description}</p>
             </div>
 
@@ -322,13 +322,13 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
             <div className="flex items-center space-x-3 pt-2">
               <button
                 onClick={() => setConfirmReward(null)}
-                className="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700"
+                className="flex-1 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 min-h-[42px]"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleExecuteRedeem(confirmReward)}
-                className="flex-1 py-2.5 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-extrabold text-xs shadow-md"
+                className="flex-1 py-2.5 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-extrabold text-xs shadow-md min-h-[42px]"
               >
                 Confirm & Redeem
               </button>
@@ -339,11 +339,11 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
 
       {/* QR Voucher Modal */}
       {viewingVoucher && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-gray-200 space-y-4 text-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#081c15]/60 backdrop-blur-sm animate-in fade-in overflow-y-auto">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl p-5 sm:p-6 shadow-2xl border border-gray-200 space-y-4 text-center my-auto max-h-[92dvh] overflow-y-auto">
             <button
               onClick={() => setViewingVoucher(null)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1"
             >
               <X className="w-5 h-5" />
             </button>
@@ -355,8 +355,8 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
             <h3 className="text-base font-bold text-[#1b4332]">{viewingVoucher.title}</h3>
 
             {/* Visual QR Code Generator */}
-            <div className="p-4 bg-white rounded-2xl border-2 border-dashed border-[#2d6a4f] inline-block shadow-inner">
-              <div className="w-44 h-44 bg-gray-900 rounded-xl p-3 flex flex-col justify-between text-white">
+            <div className="p-3 sm:p-4 bg-white rounded-2xl border-2 border-dashed border-[#2d6a4f] inline-block shadow-inner">
+              <div className="w-36 h-36 sm:w-44 sm:h-44 bg-gray-900 rounded-xl p-3 flex flex-col justify-between text-white mx-auto">
                 <div className="grid grid-cols-6 gap-1 h-full">
                   {Array.from({ length: 36 }).map((_, i) => (
                     <div 
@@ -374,7 +374,7 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
               <span className="font-mono font-bold text-[#1b4332]">{viewingVoucher.code}</span>
               <button
                 onClick={() => handleCopyCode(viewingVoucher.code)}
-                className="text-xs font-semibold text-[#2d6a4f] hover:underline flex items-center space-x-1"
+                className="text-xs font-semibold text-[#2d6a4f] hover:underline flex items-center space-x-1 p-1"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>{codeCopied ? 'Copied' : 'Copy Code'}</span>
