@@ -27,10 +27,10 @@ export const INITIAL_CITY_METRICS: CityMetrics = {
 };
 
 export const INITIAL_USER_PROFILE: UserProfile = {
-  name: "Karma Tenzin",
-  email: "karma.tenzin@steward.gmc.bt",
+  name: "Sangay Tashi",
+  email: "sangaytashi.333@gmail.com",
   role: "citizen",
-  levelTitle: "Forest & River Custodian",
+  levelTitle: "Senior Forest Steward",
   levelNumber: 4,
   totalKarmaPoints: 1480,
   spendablePoints: 830,
@@ -42,6 +42,9 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   treesPlanted: 52,
   currentStreakDays: 14,
   joinedDate: "October 2025",
+  specialty: "Golden Langur Habitat Monitor & Watershed Steward",
+  preferredSector: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway",
+  bio: "Committed to preserving Bhutan's high-biodiversity riparian zones and mindful permaculture terraces in GMC.",
   badges: [
     {
       id: "badge-river-guardian",
@@ -543,13 +546,13 @@ export const INITIAL_CITY_INSIGHT: CityInsight = {
 };
 
 export const GMC_SECTORS = [
-  { id: "sec-1", name: "Sector 1: Mindfulness Spine & Central Bridge", icon: "Landmark", color: "#1b4332", harmony: 94 },
-  { id: "sec-2", name: "Sector 2: Mao River Watershed & Riparian Corridor", icon: "Waves", color: "#2d6a4f", harmony: 91 },
-  { id: "sec-3", name: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway", icon: "Footprints", color: "#40916c", harmony: 96 },
-  { id: "sec-4", name: "Sector 4: Agri-Tech & Permaculture Terraces", icon: "Sprout", color: "#52b788", harmony: 93 },
-  { id: "sec-5", name: "Sector 5: Eco-Tech Innovation Gate & Clean Logistics", icon: "Cpu", color: "#2d6a4f", harmony: 90 },
-  { id: "sec-6", name: "Sector 6: Sarpang Dzongkhag Heritage Forest", icon: "Trees", color: "#1b4332", harmony: 97 },
-  { id: "sec-7", name: "Sector 7: Royal Manas Biological Foothills", icon: "Mountain", color: "#081c15", harmony: 95 },
+  { id: "sec-1", name: "Sector 1: Mindfulness Spine & Central Bridge", coordinates: { lat: 26.8858, lng: 90.5015 }, icon: "Landmark", color: "#1b4332", harmony: 94 },
+  { id: "sec-2", name: "Sector 2: Mao River Watershed & Riparian Corridor", coordinates: { lat: 26.8720, lng: 90.4950 }, icon: "Waves", color: "#2d6a4f", harmony: 91 },
+  { id: "sec-3", name: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway", coordinates: { lat: 26.8950, lng: 90.4780 }, icon: "Footprints", color: "#40916c", harmony: 96 },
+  { id: "sec-4", name: "Sector 4: Agri-Tech & Permaculture Terraces", coordinates: { lat: 26.8680, lng: 90.5180 }, icon: "Sprout", color: "#52b788", harmony: 93 },
+  { id: "sec-5", name: "Sector 5: Eco-Tech Innovation Gate & Clean Logistics", coordinates: { lat: 26.8810, lng: 90.5280 }, icon: "Cpu", color: "#2d6a4f", harmony: 90 },
+  { id: "sec-6", name: "Sector 6: Sarpang Dzongkhag Heritage Forest", coordinates: { lat: 26.9020, lng: 90.4890 }, icon: "Trees", color: "#1b4332", harmony: 97 },
+  { id: "sec-7", name: "Sector 7: Royal Manas Biological Foothills", coordinates: { lat: 26.9150, lng: 90.5120 }, icon: "Mountain", color: "#081c15", harmony: 95 },
 ];
 
 export const INITIAL_USER = INITIAL_USER_PROFILE;

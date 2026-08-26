@@ -16,49 +16,76 @@ import {
   Search,
   PlusCircle,
   ThumbsUp,
-  X
+  X,
+  Crosshair,
+  Navigation,
+  Globe,
+  Radio
 } from 'lucide-react';
-import { CitizenReport, Mission, Coordinates } from '../types';
+import { CitizenReport, Mission, Coordinates, LiveLocationState } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
+import { RealLeafletMap } from './RealLeafletMap';
+import { calculateDistanceKm, formatDistance, formatCoordinates } from '../utils/geo';
 
 interface InteractiveEcoMapProps {
   reports: CitizenReport[];
   missions: Mission[];
+  userLocation: LiveLocationState;
   initialSectorFilter?: string;
   onSelectReport: (report: CitizenReport) => void;
   onJoinMission: (missionId: string) => void;
   onOpenReportModal: () => void;
+  onOpenReportModalWithCoords: (coords: Coordinates, sectorName: string) => void;
+  onOpenFixResolution?: (report: CitizenReport) => void;
   onUpvoteReport: (reportId: string) => void;
+  onRecenterGPS: () => void;
+  onToggleTracking: () => void;
+  onSimulateGMCLocation: (coords: Coordinates, sectorName: string) => void;
 }
 
 export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
   reports,
   missions,
+  userLocation,
   initialSectorFilter,
   onSelectReport,
   onJoinMission,
   onOpenReportModal,
+  onOpenReportModalWithCoords,
+  onOpenFixResolution,
   onUpvoteReport,
+  onRecenterGPS,
+  onToggleTracking,
+  onSimulateGMCLocation,
 }) => {
+  const [mapEngine, setMapEngine] = useState<'real' | 'schematic'>('real');
   const [selectedSector, setSelectedSector] = useState<string>(initialSectorFilter || 'all');
   const [activeLayerMissions, setActiveLayerMissions] = useState(true);
   const [activeLayerReports, setActiveLayerReports] = useState(true);
   const [activeLayerSensors, setActiveLayerSensors] = useState(true);
   const [activeLayerWildlife, setActiveLayerWildlife] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in-progress' | 'resolved'>('all');
+  const [includeResolved, setIncludeResolved] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<{ type: 'report' | 'mission' | 'sensor' | 'wildlife'; data: any } | null>(null);
 
-  // Filtered reports
-  const filteredReports = reports.filter(r => {
+  // Calculate distance for all reports and sort nearest
+  const reportsWithDistance = reports.map(r => ({
+    ...r,
+    distanceKm: calculateDistanceKm(userLocation.coords, r.coordinates),
+    distanceText: formatDistance(calculateDistanceKm(userLocation.coords, r.coordinates))
+  })).sort((a, b) => a.distanceKm - b.distanceKm);
+
+  // Filtered reports (By default, once resolved & approved by HQ, it disappears from the active map)
+  const filteredReports = reportsWithDistance.filter(r => {
     if (selectedSector !== 'all' && r.sector !== selectedSector) return false;
-    if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if (!includeResolved && r.status === 'resolved') return false;
     return true;
   });
 
-  // Filtered missions
+  // Filtered missions (only active or upcoming missions on public map)
   const filteredMissions = missions.filter(m => {
     if (selectedSector !== 'all' && m.sector !== selectedSector) return false;
+    if (m.status === 'pending_approval' || m.status === 'rejected') return false;
     return true;
   });
 
@@ -92,90 +119,147 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div>
           <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-extrabold text-[#1b4332] tracking-tight">GMC Living Eco-Atlas</h2>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-[#d8f3dc] text-[#1b4332] rounded-full">Interactive GIS</span>
+            <h2 className="text-xl font-extrabold text-[#1b4332] tracking-tight">GMC Living Eco-Atlas & Real-Time GIS</h2>
+            <span className="px-2 py-0.5 text-[10px] font-bold bg-[#d8f3dc] text-[#1b4332] rounded-full flex items-center space-x-1">
+              <Radio className="w-3 h-3 text-[#2d6a4f] animate-pulse" />
+              <span>Live GPS Active</span>
+            </span>
           </div>
-          <p className="text-xs text-gray-500">Visualizing 35+ bridges, active restoration missions, citizen observations & sensor telemetry</p>
+          <p className="text-xs text-gray-500">
+            Real-time geocoordinate tracking: <span className="font-mono font-bold text-[#1b4332]">{formatCoordinates(userLocation.coords)}</span> (±{userLocation.accuracy}m)
+          </p>
         </div>
 
-        {/* Action button */}
+        {/* View engine switcher & Action buttons */}
         <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={() => setIncludeResolved(!includeResolved)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center space-x-1.5 ${
+              includeResolved 
+                ? 'bg-[#1b4332] text-white border-[#1b4332]' 
+                : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
+            }`}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>{includeResolved ? 'Showing All (Inc. Resolved)' : 'Active Incidents Only'}</span>
+          </button>
+
+          <div className="bg-[#f8f9f6] p-1 rounded-xl border border-gray-200 flex items-center space-x-1 text-xs">
+            <button
+              onClick={() => setMapEngine('real')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+                mapEngine === 'real' ? 'bg-[#1b4332] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>Real Tile Map (GPS)</span>
+            </button>
+            <button
+              onClick={() => setMapEngine('schematic')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+                mapEngine === 'schematic' ? 'bg-[#1b4332] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Compass className="w-3.5 h-3.5" />
+              <span>GMC Schematic</span>
+            </button>
+          </div>
+
           <button
             onClick={onOpenReportModal}
             className="px-3.5 py-2 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-bold text-xs shadow-xs flex items-center space-x-1.5 transition"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>Report at Location</span>
+            <span>Report at My GPS</span>
           </button>
         </div>
       </div>
 
-      {/* Layer Toggles & District Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-[#f8f9f6] p-3.5 rounded-2xl border border-[#d8f3dc]">
-        
-        {/* Layer Switches */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[11px] font-bold uppercase text-gray-500 mr-1 flex items-center">
-            <Layers className="w-3.5 h-3.5 mr-1 text-[#2d6a4f]" /> Layers:
-          </span>
+      {/* Real Tile Map (with Leaflet, OSM/Satellite/Topo and Live User GPS) */}
+      {mapEngine === 'real' && (
+        <RealLeafletMap
+          reports={filteredReports}
+          missions={filteredMissions}
+          userLocation={userLocation}
+          onSelectReport={onSelectReport}
+          onJoinMission={onJoinMission}
+          onOpenReportModalWithCoords={onOpenReportModalWithCoords}
+          onOpenFixResolution={onOpenFixResolution}
+          onRecenterGPS={onRecenterGPS}
+          onToggleTracking={onToggleTracking}
+          onSimulateGMCLocation={onSimulateGMCLocation}
+        />
+      )}
 
-          <button
-            onClick={() => setActiveLayerMissions(!activeLayerMissions)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
-              activeLayerMissions ? 'bg-[#1b4332] text-white' : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#52b788]" />
-            <span>Missions ({filteredMissions.length})</span>
-          </button>
+      {/* GMC Schematic Vector Canvas */}
+      {mapEngine === 'schematic' && (
+        <div className="space-y-4">
+          {/* Layer Toggles & District Filters Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#f8f9f6] p-3.5 rounded-2xl border border-[#d8f3dc]">
+            
+            {/* Layer Switches */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-[11px] font-bold uppercase text-gray-500 mr-1 flex items-center">
+                <Layers className="w-3.5 h-3.5 mr-1 text-[#2d6a4f]" /> Layers:
+              </span>
 
-          <button
-            onClick={() => setActiveLayerReports(!activeLayerReports)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
-              activeLayerReports ? 'bg-[#2d6a4f] text-white' : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#f4a261]" />
-            <span>Incidents & Reports ({filteredReports.length})</span>
-          </button>
+              <button
+                onClick={() => setActiveLayerMissions(!activeLayerMissions)}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
+                  activeLayerMissions ? 'bg-[#1b4332] text-white' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-[#52b788]" />
+                <span>Missions ({filteredMissions.length})</span>
+              </button>
 
-          <button
-            onClick={() => setActiveLayerSensors(!activeLayerSensors)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
-              activeLayerSensors ? 'bg-[#40916c] text-white' : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
-            <span>Sensor Pods ({SENSOR_NODES.length})</span>
-          </button>
+              <button
+                onClick={() => setActiveLayerReports(!activeLayerReports)}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
+                  activeLayerReports ? 'bg-[#2d6a4f] text-white' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-[#f4a261]" />
+                <span>Incidents & Reports ({filteredReports.length})</span>
+              </button>
 
-          <button
-            onClick={() => setActiveLayerWildlife(!activeLayerWildlife)}
-            className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
-              activeLayerWildlife ? 'bg-[#081c15] text-white' : 'bg-white text-gray-600 border border-gray-200'
-            }`}
-          >
-            <span className="w-2 h-2 rounded-full bg-[#fbbf24]" />
-            <span>Wildlife Corridors</span>
-          </button>
-        </div>
+              <button
+                onClick={() => setActiveLayerSensors(!activeLayerSensors)}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
+                  activeLayerSensors ? 'bg-[#40916c] text-white' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-[#38bdf8]" />
+                <span>Sensor Pods ({SENSOR_NODES.length})</span>
+              </button>
 
-        {/* Sector Selector Dropdown */}
-        <div className="flex items-center space-x-2">
-          <label className="text-xs font-semibold text-gray-600">Sector:</label>
-          <select
-            value={selectedSector}
-            onChange={(e) => setSelectedSector(e.target.value)}
-            className="text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 font-medium text-[#1b4332] focus:outline-none focus:border-[#2d6a4f]"
-          >
-            <option value="all">All GMC Sectors (Whole City)</option>
-            {GMC_SECTORS.map((s) => (
-              <option key={s.id} value={s.name}>{s.name}</option>
-            ))}
-          </select>
-        </div>
+              <button
+                onClick={() => setActiveLayerWildlife(!activeLayerWildlife)}
+                className={`px-3 py-1.5 rounded-lg font-semibold transition flex items-center space-x-1.5 ${
+                  activeLayerWildlife ? 'bg-[#081c15] text-white' : 'bg-white text-gray-600 border border-gray-200'
+                }`}
+              >
+                <span className="w-2 h-2 rounded-full bg-[#fbbf24]" />
+                <span>Wildlife Corridors</span>
+              </button>
+            </div>
 
-      </div>
+            {/* Sector Selector Dropdown */}
+            <div className="flex items-center space-x-2">
+              <label className="text-xs font-semibold text-gray-600">Sector:</label>
+              <select
+                value={selectedSector}
+                onChange={(e) => setSelectedSector(e.target.value)}
+                className="text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5 font-medium text-[#1b4332] focus:outline-none focus:border-[#2d6a4f]"
+              >
+                <option value="all">All GMC Sectors (Whole City)</option>
+                {GMC_SECTORS.map((s) => (
+                  <option key={s.id} value={s.name}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+          </div>
 
       {/* Main Interactive Map Canvas Container */}
       <div className="relative rounded-3xl bg-[#081c15] border border-[#2d6a4f]/40 overflow-hidden shadow-xl">
@@ -497,6 +581,51 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
         )}
 
       </div>
+    </div>
+  )}
+
+      {/* Real-time Proximity Radar Feed (sorted by distance from live GPS) */}
+      <div className="bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+          <div className="flex items-center space-x-2">
+            <Crosshair className="w-4 h-4 text-[#2d6a4f]" />
+            <h3 className="text-sm font-extrabold text-[#1b4332]">Real-Time GPS Proximity Radar</h3>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d8f3dc] text-[#1b4332] font-bold">
+              Nearest First
+            </span>
+          </div>
+          <span className="text-xs text-gray-500">
+            Citizen reference point: <strong className="font-mono text-[#1b4332]">{formatCoordinates(userLocation.coords)}</strong>
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          {reportsWithDistance.slice(0, 6).map((report) => (
+            <div
+              key={report.id}
+              onClick={() => onSelectReport(report)}
+              className="p-3.5 rounded-xl border border-gray-100 hover:border-[#52b788] hover:bg-[#f8f9f6] transition cursor-pointer flex flex-col justify-between space-y-2 group"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-xs font-bold text-[#1b4332] group-hover:text-[#2d6a4f] line-clamp-1">
+                  {report.title}
+                </span>
+                <span className="text-[10px] font-extrabold font-mono px-2 py-0.5 rounded-full bg-[#1b4332] text-[#d8f3dc] shrink-0">
+                  {report.distanceText}
+                </span>
+              </div>
+
+              <p className="text-[11px] text-gray-500 line-clamp-2">{report.description}</p>
+
+              <div className="flex items-center justify-between text-[10px] text-gray-400 pt-1 border-t border-gray-100">
+                <span>{report.locationName}</span>
+                <span className="font-mono">{formatCoordinates(report.coordinates)}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 };

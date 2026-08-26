@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Camera, 
@@ -14,18 +14,24 @@ import {
   Waves, 
   Recycle, 
   Info,
-  Loader2
+  Loader2,
+  Crosshair,
+  Compass
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { CitizenReport, ReportCategory, AIAnalysisResult } from '../types';
+import { CitizenReport, ReportCategory, AIAnalysisResult, Coordinates, LiveLocationState } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
+import { formatCoordinates } from '../utils/geo';
 
 interface ActiveReportingModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitReport: (newReport: CitizenReport) => void;
   userName: string;
+  initialCoordinates?: Coordinates;
+  initialSector?: string;
+  userLocation?: LiveLocationState;
 }
 
 const SAMPLE_PRESETS = [
@@ -68,18 +74,67 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
   onClose,
   onSubmitReport,
   userName,
+  initialCoordinates,
+  initialSector,
+  userLocation,
 }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ReportCategory>('wildlife');
-  const [sector, setSector] = useState(GMC_SECTORS[1].name);
+  const [sector, setSector] = useState(initialSector || GMC_SECTORS[1].name);
   const [locationName, setLocationName] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<AIAnalysisResult | null>(null);
 
+  // Real-time geocoordinates
+  const [reportCoords, setReportCoords] = useState<Coordinates>(() => {
+    if (initialCoordinates) return initialCoordinates;
+    if (userLocation?.coords) return userLocation.coords;
+    return { lat: 26.8858, lng: 90.5015 };
+  });
+  const [isLocatingGPS, setIsLocatingGPS] = useState(false);
+
+  useEffect(() => {
+    if (initialCoordinates) {
+      setReportCoords(initialCoordinates);
+    } else if (userLocation?.coords) {
+      setReportCoords(userLocation.coords);
+    }
+  }, [initialCoordinates, userLocation]);
+
+  useEffect(() => {
+    if (initialSector) {
+      setSector(initialSector);
+    }
+  }, [initialSector]);
+
   if (!isOpen) return null;
+
+  const handleFetchCurrentGPS = () => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser.');
+      return;
+    }
+    setIsLocatingGPS(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords: Coordinates = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        };
+        setReportCoords(coords);
+        setIsLocatingGPS(false);
+        playMindfulChime('bell');
+      },
+      (err) => {
+        console.warn('GPS acquire error:', err);
+        setIsLocatingGPS(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const handleApplyPreset = (preset: typeof SAMPLE_PRESETS[0]) => {
     setTitle(preset.title);
@@ -167,10 +222,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
       category,
       sector,
       locationName: locationName.trim() || `${sector} Zone`,
-      coordinates: {
-        lat: 26.880 + (Math.random() - 0.5) * 0.03,
-        lng: 90.500 + (Math.random() - 0.5) * 0.03
-      },
+      coordinates: reportCoords,
       photoUrl: photoUrl || 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80',
       status: 'pending',
       timestamp: 'Just now',
@@ -392,6 +444,58 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
                 placeholder="e.g., Bridge 14 Canopy Rope Corridor"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-[#1b4332] focus:outline-none focus:border-[#2d6a4f]"
               />
+            </div>
+
+            {/* Real-time Geocoordinates Capture Bar */}
+            <div className="sm:col-span-2 p-3.5 rounded-2xl bg-[#f8f9f6] border border-[#d8f3dc] space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-[#1b4332] flex items-center space-x-1.5">
+                  <Crosshair className="w-4 h-4 text-[#2d6a4f]" />
+                  <span>Real-Time Geocoordinate Tag</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleFetchCurrentGPS}
+                  disabled={isLocatingGPS}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-[#52b788] text-[11px] font-bold text-[#1b4332] hover:bg-[#d8f3dc] transition flex items-center space-x-1 shadow-2xs"
+                >
+                  <Compass className="w-3.5 h-3.5 text-[#52b788]" />
+                  <span>{isLocatingGPS ? 'Acquiring GPS...' : 'Fetch Live GPS'}</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-[10px] text-gray-500 block">Latitude:</span>
+                  <input
+                    type="number"
+                    step="0.00001"
+                    value={reportCoords.lat}
+                    onChange={(e) => setReportCoords(prev => ({ ...prev, lat: parseFloat(e.target.value) || prev.lat }))}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 font-mono font-bold text-gray-800 text-xs bg-white focus:outline-none focus:border-[#2d6a4f]"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-500 block">Longitude:</span>
+                  <input
+                    type="number"
+                    step="0.00001"
+                    value={reportCoords.lng}
+                    onChange={(e) => setReportCoords(prev => ({ ...prev, lng: parseFloat(e.target.value) || prev.lng }))}
+                    className="w-full px-2.5 py-1.5 rounded-lg border border-gray-200 font-mono font-bold text-gray-800 text-xs bg-white focus:outline-none focus:border-[#2d6a4f]"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1">
+                <span>Formatted: <strong className="font-mono text-[#2d6a4f]">{formatCoordinates(reportCoords)}</strong></span>
+                {userLocation && (
+                  <span className="text-[10px] bg-[#d8f3dc] text-[#1b4332] font-semibold px-2 py-0.5 rounded-full">
+                    GPS Accuracy: ±{userLocation.accuracy}m
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Description */}

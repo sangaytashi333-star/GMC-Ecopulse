@@ -6,11 +6,25 @@ export type ReportCategory =
   | 'botanical' 
   | 'infrastructure';
 
-export type ReportStatus = 'pending' | 'dispatched' | 'in-progress' | 'resolved';
+export type ReportStatus = 'pending' | 'dispatched' | 'in-progress' | 'pending_verification' | 'resolved';
 
 export interface Coordinates {
   lat: number;
   lng: number;
+}
+
+export interface LiveLocationState {
+  coords: Coordinates;
+  accuracy: number;
+  altitude?: number | null;
+  heading?: number | null;
+  speed?: number | null;
+  timestamp: number;
+  nearestSector: string;
+  isLiveTracking: boolean;
+  mode: 'real' | 'simulated';
+  status: 'idle' | 'requesting' | 'active' | 'denied' | 'unavailable';
+  errorMessage?: string;
 }
 
 export interface AIAnalysisResult {
@@ -23,6 +37,22 @@ export interface AIAnalysisResult {
   actionableRecommendations: string[];
   biodiversityIndexContribution: string;
   carbonCircularityNote: string;
+}
+
+export interface ResolutionEvidence {
+  fixerName: string;
+  fixerEmail?: string;
+  fixDescription: string;
+  afterPhotoUrl?: string;
+  beforePhotoUrl?: string;
+  timestamp: string;
+  wasteWeightKg?: number;
+  treesRestored?: number;
+  proposedBonusPoints: number;
+  officialNotes?: string;
+  verifiedByOfficial?: string;
+  verifiedAt?: string;
+  isApproved?: boolean;
 }
 
 export interface CitizenReport {
@@ -45,6 +75,8 @@ export interface CitizenReport {
   resolvedAt?: string;
   upvotes: number;
   userUpvoted?: boolean;
+  resolutionEvidence?: ResolutionEvidence;
+  cleanupKarmaBonus?: number;
 }
 
 export interface Mission {
@@ -59,13 +91,18 @@ export interface Mission {
   currentParticipants: number;
   rewardPoints: number;
   urgency: 'routine' | 'priority' | 'urgent';
-  status: 'active' | 'completed' | 'upcoming';
+  status: 'active' | 'completed' | 'upcoming' | 'pending_approval' | 'rejected';
   startDate: string;
   duration: string;
   organizer: string;
   requiredSkills: string[];
   impactEstimate: string;
   joined: boolean;
+  proposedBy?: string;
+  proposedByEmail?: string;
+  proposalDate?: string;
+  approvedByOfficial?: string;
+  rejectionReason?: string;
 }
 
 export interface RewardItem {
@@ -116,7 +153,7 @@ export interface Badge {
 export interface UserProfile {
   name: string;
   email: string;
-  role: 'citizen' | 'admin';
+  role: 'citizen' | 'official' | 'admin';
   levelTitle: string;
   levelNumber: number;
   totalKarmaPoints: number;
@@ -130,6 +167,11 @@ export interface UserProfile {
   currentStreakDays: number;
   joinedDate: string;
   badges: Badge[];
+  bio?: string;
+  specialty?: string;
+  preferredSector?: string;
+  avatarEmoji?: string;
+  phone?: string;
 }
 
 export interface FieldTeam {
