@@ -25,7 +25,10 @@ import {
   Volume2,
   Square,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  Play,
+  Pause
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CitizenReport, ReportCategory, AIAnalysisResult, Coordinates, LiveLocationState } from '../types';
@@ -33,6 +36,8 @@ import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
 import { formatCoordinates } from '../utils/geo';
 import { CameraCaptureView } from './CameraCaptureView';
+import { VoicePlayer } from './VoicePlayer';
+import { audioRecorder, createSampleVoiceRecording } from '../utils/audioRecorder';
 
 interface ActiveReportingModalProps {
   isOpen: boolean;
@@ -123,171 +128,85 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
   });
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
 
-  // Voice-to-Text State via Browser SpeechRecognition API
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [interimTranscript, setInterimTranscript] = useState('');
-  const [speechError, setSpeechError] = useState<string | null>(null);
-  const [voiceTarget, setVoiceTarget] = useState<'description' | 'title'>('description');
-  const [speechLanguage, setSpeechLanguage] = useState<'en-US' | 'en-GB' | 'en-IN'>('en-US');
-  const recognitionRef = useRef<any>(null);
+  // Citizen Direct Voice Recording State (Raw audio dispatch)
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [audioRecordDuration, setAudioRecordDuration] = useState(0);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [recordedAudioDuration, setRecordedAudioDuration] = useState<number>(0);
+  const [audioRecordError, setAudioRecordError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const hasSpeech = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
-      setSpeechSupported(hasSpeech);
-    }
-  }, []);
-
-  // Ensure recognition is stopped when component unmounts
+  // Ensure recording is stopped/canceled when component unmounts
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {
-          // ignore
-        }
-      }
+      audioRecorder.cancel();
     };
   }, []);
 
-  const stopVoiceDictation = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (err) {
-        // ignore
-      }
+  const handleStartVoiceRecording = async () => {
+    setAudioRecordError(null);
+    try {
+      setAudioRecordDuration(0);
+      await audioRecorder.start((secs) => {
+        setAudioRecordDuration(secs);
+      });
+      setIsRecordingAudio(true);
+      playMindfulChime('karma');
+    } catch (err: any) {
+      console.warn('Microphone error:', err);
+      setAudioRecordError(err?.message || 'Microphone access is unavailable or denied. You can generate a simulated voice note.');
+      setIsRecordingAudio(false);
     }
-    // Commit any remaining interim text
-    if (interimTranscript.trim()) {
-      const remaining = interimTranscript.trim();
-      if (voiceTarget === 'title') {
-        setTitle(prev => (prev ? `${prev} ${remaining}` : remaining));
-      } else {
-        setDescription(prev => (prev ? `${prev} ${remaining}` : remaining));
+  };
+
+  const handleStopVoiceRecording = async () => {
+    try {
+      const result = await audioRecorder.stop();
+      setRecordedAudioUrl(result.audioUrl);
+      setRecordedAudioDuration(result.durationSeconds);
+      setIsRecordingAudio(false);
+      playMindfulChime('badge');
+
+      // Autofill title or description if empty so user has an effortless submission
+      if (!title.trim()) {
+        setTitle(`Voice Dispatch: ${category.charAt(0).toUpperCase() + category.slice(1)} Observation`);
       }
-      setInterimTranscript('');
+      if (!description.trim()) {
+        setDescription(`Citizen voice observation recorded directly in native dialect (${result.durationSeconds}s audio). Ready for playback by HQ officials and on the interactive map.`);
+      }
+    } catch (err: any) {
+      console.warn('Error stopping audio recording:', err);
+      setIsRecordingAudio(false);
     }
-    setIsListening(false);
+  };
+
+  const handleClearVoiceRecording = () => {
+    audioRecorder.cancel();
+    setRecordedAudioUrl(null);
+    setRecordedAudioDuration(0);
+    setIsRecordingAudio(false);
+    setAudioRecordDuration(0);
     playMindfulChime('bell');
   };
 
-  const startVoiceDictation = (target: 'description' | 'title' = 'description') => {
-    setVoiceTarget(target);
-    setSpeechError(null);
-
-    const SpeechRecognitionClass = 
-      (typeof window !== 'undefined' && 
-       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) || null;
-
-    if (!SpeechRecognitionClass) {
-      setSpeechError('Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.');
-      return;
+  const handleUseDemoVoiceDispatch = () => {
+    const demo = createSampleVoiceRecording(title || 'Himalayan Corridor Observation');
+    setRecordedAudioUrl(demo.audioUrl);
+    setRecordedAudioDuration(demo.durationSeconds);
+    if (!title.trim()) {
+      setTitle(`Voice Dispatch: ${category.charAt(0).toUpperCase() + category.slice(1)} Observation`);
     }
-
-    try {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort();
-        } catch (e) {}
-      }
-
-      const recognition = new SpeechRecognitionClass();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = speechLanguage;
-
-      recognition.onstart = () => {
-        setIsListening(true);
-        setSpeechError(null);
-        playMindfulChime('karma');
-      };
-
-      recognition.onresult = (event: any) => {
-        let currentInterim = '';
-        let currentFinal = '';
-
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          const item = event.results[i];
-          const text = item[0]?.transcript || '';
-          if (item.isFinal) {
-            currentFinal += text;
-          } else {
-            currentInterim += text;
-          }
-        }
-
-        setInterimTranscript(currentInterim);
-
-        if (currentFinal.trim()) {
-          const newPhrase = currentFinal.trim();
-          if (target === 'title') {
-            setTitle(prev => {
-              const combined = prev ? `${prev.trim()} ${newPhrase}` : newPhrase;
-              return combined.charAt(0).toUpperCase() + combined.slice(1);
-            });
-          } else {
-            setDescription(prev => {
-              const combined = prev ? `${prev.trim()} ${newPhrase}` : newPhrase;
-              return combined.charAt(0).toUpperCase() + combined.slice(1);
-            });
-          }
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        console.warn('SpeechRecognition error:', event.error);
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          setSpeechError('Microphone access denied. Please enable microphone permissions in your browser.');
-          setIsListening(false);
-        } else if (event.error === 'no-speech') {
-          setSpeechError('No speech detected. Microphone is active and listening for your voice.');
-        } else if (event.error === 'network') {
-          setSpeechError('Network connectivity interrupted voice transcription. You can continue typing directly.');
-          setIsListening(false);
-        } else if (event.error !== 'aborted') {
-          setSpeechError(`Voice notice: ${event.error}`);
-          setIsListening(false);
-        }
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-        setInterimTranscript('');
-      };
-
-      recognitionRef.current = recognition;
-      recognition.start();
-    } catch (err) {
-      console.warn('Failed to start speech recognition:', err);
-      setSpeechError('Could not initialize microphone speech recognition.');
-      setIsListening(false);
+    if (!description.trim()) {
+      setDescription(`Citizen voice dispatch recorded in original language (${demo.durationSeconds}s audio). Tap Play to listen.`);
     }
-  };
-
-  const toggleVoiceDictation = (target: 'description' | 'title' = 'description') => {
-    if (isListening) {
-      if (voiceTarget === target) {
-        stopVoiceDictation();
-      } else {
-        stopVoiceDictation();
-        setTimeout(() => startVoiceDictation(target), 200);
-      }
-    } else {
-      startVoiceDictation(target);
-    }
+    playMindfulChime('badge');
   };
 
   const handleModalClose = () => {
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.abort();
-      } catch (e) {}
+    if (isRecordingAudio) {
+      audioRecorder.cancel();
     }
-    setIsListening(false);
-    setInterimTranscript('');
+    setIsRecordingAudio(false);
+    setAudioRecordDuration(0);
     onClose();
   };
 
@@ -445,11 +364,14 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
         ],
         biodiversityIndexContribution: '+0.15% Corridor Health',
         carbonCircularityNote: 'Zero-waste verification logged.'
-      }
+      },
+      voiceAudioUrl: recordedAudioUrl || undefined,
+      voiceDurationSeconds: recordedAudioDuration || undefined,
     };
 
-    if (isListening) {
-      stopVoiceDictation();
+    if (isRecordingAudio) {
+      audioRecorder.cancel();
+      setIsRecordingAudio(false);
     }
 
     // Confetti & celebratory audio
@@ -668,20 +590,11 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
             <div className="space-y-1 sm:col-span-2">
               <div className="flex items-center justify-between">
                 <label className="block text-xs font-bold text-[#1b4332]">Observation Title *</label>
-                {speechSupported && (
-                  <button
-                    type="button"
-                    onClick={() => toggleVoiceDictation('title')}
-                    className={`px-2 py-0.5 rounded-lg text-[11px] font-bold flex items-center space-x-1.5 transition border ${
-                      isListening && voiceTarget === 'title'
-                        ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-xs'
-                        : 'bg-white text-[#2d6a4f] hover:bg-[#d8f3dc]/60 border-[#52b788]/40'
-                    }`}
-                    title="Narrate title using your voice"
-                  >
-                    <Mic className={`w-3 h-3 ${isListening && voiceTarget === 'title' ? 'text-rose-600 animate-pulse' : 'text-[#2d6a4f]'}`} />
-                    <span>{isListening && voiceTarget === 'title' ? 'Listening...' : 'Voice Title'}</span>
-                  </button>
+                {recordedAudioUrl && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#1b4332] text-[#d8f3dc] flex items-center gap-1">
+                    <Radio className="w-3 h-3 text-[#52b788] animate-pulse" />
+                    <span>Voice Dispatch Attached</span>
+                  </span>
                 )}
               </div>
               <input
@@ -793,155 +706,132 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
               </div>
             </div>
 
-            {/* Description & Voice-to-Text Studio */}
-            <div className="space-y-2 sm:col-span-2">
-              <div className="flex items-center justify-between flex-wrap gap-1.5">
-                <div className="flex items-center space-x-1.5">
-                  <label className="block text-xs font-bold text-[#1b4332]">Mindful Observation Notes</label>
-                  {isListening && voiceTarget === 'description' && (
-                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
-                      <span>Recording Voice...</span>
-                    </span>
-                  )}
+            {/* Citizen Direct Voice Dispatch Studio (Raw Audio Recording) */}
+            <div className="space-y-3 sm:col-span-2 p-4 rounded-2xl bg-gradient-to-br from-[#f4f9f4] via-[#eef7ee] to-[#e8f5e9] border border-[#52b788]/40 shadow-xs">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center space-x-2.5">
+                  <span className="p-2 rounded-xl bg-[#1b4332] text-[#52b788] shadow-xs">
+                    <Mic className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-bold text-[#1b4332] flex items-center gap-1.5">
+                      Citizen Voice Dispatch Studio
+                      {recordedAudioUrl && (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#1b4332] text-[#d8f3dc]">
+                          Audio Recorded
+                        </span>
+                      )}
+                    </h4>
+                    <p className="text-[11px] text-gray-600">
+                      Record your observation in any language (Dzongkha, Sharchop, English). Plays at HQ & on map.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {/* Language Selector */}
-                  {speechSupported && (
-                    <select
-                      value={speechLanguage}
-                      onChange={(e) => setSpeechLanguage(e.target.value as any)}
-                      disabled={isListening}
-                      className="text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-1.5 py-0.5 focus:outline-none"
-                      title="Dictation Language"
-                    >
-                      <option value="en-US">English (US)</option>
-                      <option value="en-IN">English (India/Bhutan)</option>
-                      <option value="en-GB">English (UK)</option>
-                    </select>
-                  )}
-
-                  {/* Primary Voice-to-Text Dictation Toggle Button */}
-                  {speechSupported ? (
+                  {!recordedAudioUrl && !isRecordingAudio && (
                     <button
                       type="button"
-                      onClick={() => toggleVoiceDictation('description')}
-                      className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-xs ${
-                        isListening && voiceTarget === 'description'
-                          ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200'
-                          : 'bg-[#1b4332] hover:bg-[#2d6a4f] text-[#d8f3dc]'
-                      }`}
-                      title={isListening && voiceTarget === 'description' ? 'Stop voice recording' : 'Narrate your observation with microphone'}
+                      onClick={handleUseDemoVoiceDispatch}
+                      className="px-2.5 py-1.5 rounded-xl bg-white/90 hover:bg-white text-gray-700 text-[11px] font-semibold border border-gray-200 transition shadow-2xs"
+                      title="Use a simulated voice sample for quick testing"
                     >
-                      {isListening && voiceTarget === 'description' ? (
-                        <>
-                          <Square className="w-3.5 h-3.5 fill-white text-white" />
-                          <span>Stop Dictation</span>
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-3.5 h-3.5 text-[#52b788]" />
-                          <span>Narrate Notes</span>
-                        </>
-                      )}
+                      Sample Voice
+                    </button>
+                  )}
+
+                  {!isRecordingAudio ? (
+                    <button
+                      type="button"
+                      onClick={handleStartVoiceRecording}
+                      className="px-3.5 py-2 rounded-xl bg-[#1b4332] hover:bg-[#2d6a4f] text-[#d8f3dc] text-xs font-bold transition flex items-center space-x-1.5 shadow-sm active:scale-95"
+                    >
+                      <Mic className="w-3.5 h-3.5 text-[#52b788]" />
+                      <span>{recordedAudioUrl ? 'Record Again' : 'Record Voice Observation'}</span>
                     </button>
                   ) : (
-                    <span className="text-[11px] text-gray-400 italic">
-                      Voice input available on Chrome / Safari
-                    </span>
+                    <button
+                      type="button"
+                      onClick={handleStopVoiceRecording}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold transition flex items-center space-x-1.5 shadow-md animate-pulse active:scale-95"
+                    >
+                      <Square className="w-3.5 h-3.5 fill-current" />
+                      <span>Stop Recording ({audioRecordDuration}s)</span>
+                    </button>
                   )}
                 </div>
               </div>
 
-              {/* Active Voice Waveform & Live Interim Transcript Display */}
-              {isListening && (
-                <div className="p-3 rounded-2xl bg-gradient-to-r from-[#d8f3dc]/70 via-emerald-50 to-[#d8f3dc]/70 border border-[#52b788] animate-in fade-in duration-200 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="flex items-center space-x-0.5 h-4 px-1.5 py-0.5 bg-white/80 rounded-md border border-emerald-200">
-                        <span className="w-1 h-2.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                        <span className="w-1 h-3.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                        <span className="w-1 h-2 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.45s]"></span>
-                        <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce"></span>
-                      </div>
-                      <span className="text-xs font-bold text-[#1b4332]">
-                        {voiceTarget === 'title' ? 'Narrating Observation Title' : 'Narrating Observation Notes'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center space-x-1.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (voiceTarget === 'description') {
-                            setDescription(prev => (prev ? `${prev.trim()}. ` : ''));
-                          } else {
-                            setTitle(prev => (prev ? `${prev.trim()}. ` : ''));
-                          }
-                        }}
-                        className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
-                        title="Add period"
-                      >
-                        + Period (.)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={stopVoiceDictation}
-                        className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold hover:bg-rose-700"
-                      >
-                        Done
-                      </button>
-                    </div>
+              {/* While Recording Live Equalizer Display */}
+              {isRecordingAudio && (
+                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-300 flex items-center justify-between text-xs text-rose-900 animate-in fade-in">
+                  <div className="flex items-center space-x-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-600 animate-ping" />
+                    <span className="font-bold">
+                      Recording your voice observation... Speak naturally in your native language ({audioRecordDuration}s)
+                    </span>
                   </div>
-
-                  {/* Real-time Interim Voice Ticker */}
-                  <div className="p-2 rounded-xl bg-white/90 border border-emerald-200/80 text-xs text-gray-800 font-medium min-h-[38px] flex items-center">
-                    {interimTranscript ? (
-                      <span className="text-emerald-900 font-semibold italic">
-                        "{interimTranscript}..."
-                      </span>
-                    ) : (
-                      <span className="text-gray-400 italic text-[11px] flex items-center space-x-1.5">
-                        <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
-                        <span>Speak clearly into your microphone... (GMC Web Speech Engine is active)</span>
-                      </span>
-                    )}
+                  <div className="flex items-center space-x-1">
+                    <span className="w-1.5 h-4 bg-rose-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-7 bg-rose-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-3 bg-rose-600 rounded-full animate-bounce [animation-delay:-0.45s]" />
+                    <span className="w-1.5 h-6 bg-rose-600 rounded-full animate-bounce" />
                   </div>
                 </div>
               )}
 
-              {/* Speech Error Banner if permission denied or network failure */}
-              {speechError && (
-                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start justify-between space-x-2">
-                  <div className="flex items-start space-x-1.5">
-                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                    <span>{speechError}</span>
+              {/* Recorded Audio Preview */}
+              {recordedAudioUrl && !isRecordingAudio && (
+                <div className="space-y-2 pt-1 animate-in fade-in">
+                  <VoicePlayer
+                    audioUrl={recordedAudioUrl}
+                    durationSeconds={recordedAudioDuration}
+                    label="Citizen Voice Observation (Ready for HQ & Map)"
+                  />
+                  <div className="flex items-center justify-between text-[11px] text-gray-500 pt-0.5">
+                    <span className="text-emerald-800 font-semibold flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Original recorded voice note attached • GMC officials and map visitors can play it directly</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleClearVoiceRecording}
+                      className="text-rose-600 hover:text-rose-800 font-bold transition flex items-center gap-1 shrink-0 ml-2"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Remove Audio</span>
+                    </button>
                   </div>
+                </div>
+              )}
+
+              {audioRecordError && (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-center justify-between">
+                  <span>{audioRecordError}</span>
                   <button
                     type="button"
-                    onClick={() => setSpeechError(null)}
-                    className="text-amber-700 hover:text-amber-900 text-xs font-bold"
+                    onClick={handleUseDemoVoiceDispatch}
+                    className="ml-2 font-bold text-amber-800 underline text-[11px] shrink-0"
                   >
-                    Dismiss
+                    Use Sample Audio
                   </button>
                 </div>
               )}
+            </div>
 
-              {/* Textarea */}
+            {/* Description / Written Notes */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <label className="block text-xs font-bold text-[#1b4332]">
+                Observation Notes (Optional Written Details)
+              </label>
               <div className="relative">
                 <textarea
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe details, animal behaviors, river flow status, or required field assistance (or click 'Narrate Notes' above to speak)..."
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-[#1b4332] focus:outline-none transition ${
-                    isListening && voiceTarget === 'description'
-                      ? 'border-[#52b788] bg-emerald-50/20 ring-2 ring-[#52b788]/30'
-                      : 'border-gray-200 focus:border-[#2d6a4f]'
-                  }`}
+                  placeholder="Add any notes or context to accompany your voice dispatch..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-[#1b4332] focus:outline-none focus:border-[#2d6a4f]"
                 />
-
                 {description && (
                   <div className="absolute bottom-2 right-2 flex items-center space-x-1.5">
                     <span className="text-[10px] text-gray-400 bg-white/80 px-1.5 py-0.5 rounded">
@@ -962,7 +852,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
               {/* Quick Guidance Prompt Chip */}
               <div className="flex items-center justify-between text-[11px] text-gray-500 pt-0.5">
                 <span className="flex items-center space-x-1 truncate max-w-sm">
-                  <span className="text-gray-400">💡 Voice Tip:</span>
+                  <span className="text-gray-400">💡 Field Note Tip:</span>
                   <span className="italic truncate text-gray-600">
                     "Observed 4 langurs crossing rope bridge near Mao River..."
                   </span>

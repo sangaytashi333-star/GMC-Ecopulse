@@ -30,6 +30,7 @@ import { CitizenReport, Mission, Coordinates, LiveLocationState } from '../types
 import { calculateDistanceKm, formatDistance, formatCoordinates } from '../utils/geo';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
+import { VoicePlayer } from './VoicePlayer';
 
 export type MapTileStyle = 'satellite' | 'street' | 'voyager' | 'topo';
 
@@ -296,6 +297,7 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
       const cat = categoryColors[report.category] || categoryColors.wildlife;
       const isPendingVerification = report.status === 'pending_verification';
 
+      const hasVoice = Boolean(report.voiceAudioUrl);
       const reportIcon = L.divIcon({
         className: 'custom-report-marker',
         html: `
@@ -304,6 +306,7 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
               isPendingVerification ? 'ring-2 ring-amber-400 animate-pulse' : ''
             }" style="background: ${isPendingVerification ? '#fbbf24' : cat.bg}; border-color: ${cat.border};">
               <span>${isPendingVerification ? '⏳' : cat.emoji}</span>
+              ${hasVoice ? '<span class="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#081c15] text-white text-[9px] rounded-full flex items-center justify-center border border-[#52b788] shadow-xs" title="Voice Dispatch Available">🎙️</span>' : ''}
             </div>
             <div class="absolute -bottom-1 w-2 h-2 rotate-45" style="background: ${cat.border};"></div>
           </div>
@@ -329,6 +332,7 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
           <div class="text-[10px] text-gray-600">${formatDistance(dist)} away • ${
             isPendingVerification ? '⏳ Verification in Progress' : report.sector
           }</div>
+          ${hasVoice ? '<div class="text-[10px] text-emerald-800 font-extrabold flex items-center gap-1 mt-0.5">🎙️ Voice Dispatch Recorded</div>' : ''}
         </div>
       `, { direction: 'top', offset: [0, -32] });
 
@@ -605,6 +609,15 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
               <h4 className="text-sm font-bold text-[#1b4332]">{selectedEntity.data.title}</h4>
               <p className="text-xs text-gray-600 leading-relaxed">{selectedEntity.data.description}</p>
               
+              {/* Citizen Voice Audio Dispatch on Map */}
+              {selectedEntity.data.voiceAudioUrl && (
+                <VoicePlayer
+                  audioUrl={selectedEntity.data.voiceAudioUrl}
+                  durationSeconds={selectedEntity.data.voiceDurationSeconds}
+                  label="Citizen Field Voice Dispatch"
+                />
+              )}
+
               {selectedEntity.data.photoUrl && (
                 <img
                   src={selectedEntity.data.photoUrl}

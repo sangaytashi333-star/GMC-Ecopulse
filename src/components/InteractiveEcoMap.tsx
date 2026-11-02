@@ -28,6 +28,7 @@ import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
 import { RealLeafletMap, MapTileStyle } from './RealLeafletMap';
 import { calculateDistanceKm, formatDistance, formatCoordinates } from '../utils/geo';
+import { VoicePlayer } from './VoicePlayer';
 
 interface InteractiveEcoMapProps {
   reports: CitizenReport[];
@@ -600,6 +601,15 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
               <p className="text-xs text-gray-600 leading-relaxed">
                 {selectedEntity.data.description || 'Continuous telemetry stream connected to GMC Central Hub.'}
               </p>
+
+              {/* Citizen Voice Dispatch */}
+              {selectedEntity.type === 'report' && selectedEntity.data.voiceAudioUrl && (
+                <VoicePlayer
+                  audioUrl={selectedEntity.data.voiceAudioUrl}
+                  durationSeconds={selectedEntity.data.voiceDurationSeconds}
+                  label="Citizen Field Voice Dispatch"
+                />
+              )}
 
               <div className="text-[11px] text-gray-500 flex items-center space-x-1">
                 <MapPin className="w-3.5 h-3.5 text-[#52b788]" />

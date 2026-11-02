@@ -73,6 +73,8 @@ export interface CitizenReport {
   locationName: string;
   coordinates: Coordinates;
   photoUrl?: string;
+  voiceAudioUrl?: string;
+  voiceDurationSeconds?: number;
   status: ReportStatus;
   timestamp: string;
   createdAt?: string;

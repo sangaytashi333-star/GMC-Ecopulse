@@ -15,6 +15,7 @@ import {
   Hourglass
 } from 'lucide-react';
 import { CitizenReport } from '../types';
+import { VoicePlayer } from './VoicePlayer';
 
 interface ReportDetailModalProps {
   report: CitizenReport | null;
@@ -93,6 +94,15 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
               Logged by <strong>{report.reporterName}</strong> • {report.timestamp} • Sector: {report.sector}
             </p>
           </div>
+
+          {/* Citizen Recorded Voice Observation */}
+          {report.voiceAudioUrl && (
+            <VoicePlayer
+              audioUrl={report.voiceAudioUrl}
+              durationSeconds={report.voiceDurationSeconds}
+              label={`Citizen Voice Dispatch • ${report.reporterName}`}
+            />
+          )}
 
           {/* Main Description */}
           <p className="text-xs sm:text-sm text-gray-700 leading-relaxed bg-[#f8f9f6] p-4 rounded-2xl border border-gray-200">

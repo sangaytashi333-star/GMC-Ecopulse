@@ -8,6 +8,7 @@ import {
   CityInsight,
   CommunityRankingContributor
 } from '../types';
+import { createSampleVoiceRecording } from '../utils/audioRecorder';
 
 export const INITIAL_CITY_METRICS: CityMetrics = {
   harmonyScore: 92.6,
@@ -195,6 +196,8 @@ export const INITIAL_REPORTS: CitizenReport[] = [
     locationName: "Bridge 14 Canopy Corridor",
     coordinates: { lat: 26.8835, lng: 90.4982 },
     photoUrl: "https://images.unsplash.com/photo-1540573133985-87b6da6d54a9?auto=format&fit=crop&w=800&q=80",
+    voiceAudioUrl: createSampleVoiceRecording("Langur Family").audioUrl,
+    voiceDurationSeconds: 4,
     status: "resolved",
     timestamp: "Today, 06:45 AM",
     reporterName: "Karma Tenzin",
@@ -230,6 +233,8 @@ export const INITIAL_REPORTS: CitizenReport[] = [
     locationName: "Mao River Station 4",
     coordinates: { lat: 26.8920, lng: 90.5120 },
     photoUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
+    voiceAudioUrl: createSampleVoiceRecording("Mao River Fish Ladder").audioUrl,
+    voiceDurationSeconds: 4,
     status: "in-progress",
     timestamp: "Today, 08:12 AM",
     reporterName: "Pema Dorji",

@@ -39,6 +39,7 @@ import {
 import { CitizenReport, FieldTeam, CityMetrics, ReportStatus, Mission, UserProfile, Coordinates } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
+import { VoicePlayer } from './VoicePlayer';
 
 interface AdminPortalProps {
   user: UserProfile;
@@ -550,10 +551,28 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           </span>
                           <span className="text-[11px] text-gray-400 font-mono">#{report.id}</span>
                           <span className="text-[11px] text-gray-500">{report.timestamp}</span>
+                          {report.voiceAudioUrl && (
+                            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-[#1b4332] text-[#74c69d] border border-[#52b788]/40 flex items-center gap-1 shadow-2xs">
+                              <Radio className="w-2.5 h-2.5 text-[#52b788] animate-pulse" />
+                              <span>🎙️ Voice Note ({report.voiceDurationSeconds || 4}s)</span>
+                            </span>
+                          )}
                         </div>
 
                         <h4 className="text-sm sm:text-base font-bold text-[#1b4332] truncate">{report.title}</h4>
                         <p className="text-xs text-gray-600 max-w-2xl line-clamp-2">{report.description}</p>
+
+                        {/* Inline Compact Voice Player */}
+                        {report.voiceAudioUrl && (
+                          <div className="pt-1.5 max-w-sm">
+                            <VoicePlayer
+                              audioUrl={report.voiceAudioUrl}
+                              durationSeconds={report.voiceDurationSeconds}
+                              compact={true}
+                              label="HQ Voice Triage Playback"
+                            />
+                          </div>
+                        )}
 
                         {/* Citizen Fix Notification Strip */}
                         {report.status === 'pending_verification' && report.resolutionEvidence && (
@@ -1235,6 +1254,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 ✕
               </button>
             </div>
+
+            {/* Citizen Voice Dispatch Playback for HQ Officials */}
+            {selectedReport.voiceAudioUrl && (
+              <VoicePlayer
+                audioUrl={selectedReport.voiceAudioUrl}
+                durationSeconds={selectedReport.voiceDurationSeconds}
+                label={`Citizen Voice Dispatch (Raw Audio) • Logged by ${selectedReport.reporterName}`}
+              />
+            )}
 
             {/* CITIZEN FIX RESOLUTION EVIDENCE REVIEW SECTION */}
             {selectedReport.resolutionEvidence ? (
