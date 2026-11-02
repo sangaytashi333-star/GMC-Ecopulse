@@ -18,13 +18,16 @@ import {
   CheckCircle2,
   LogIn,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Trophy
 } from 'lucide-react';
 import { UserProfile, CityMetrics } from '../types';
 import { INITIAL_CITY_METRICS, INITIAL_USER_PROFILE } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
+import { PWAInstallButton } from './PWAInstallButton';
+import { OfflineIndicator } from './OfflineIndicator';
 
-export type NavTabId = 'dashboard' | 'map' | 'missions' | 'marketplace' | 'profile' | 'admin' | 'auth';
+export type NavTabId = 'dashboard' | 'map' | 'missions' | 'marketplace' | 'profile' | 'rankings' | 'admin' | 'auth';
 
 interface NavbarProps {
   currentTab?: NavTabId;
@@ -40,6 +43,8 @@ interface NavbarProps {
   onOpenReportModal: () => void;
   onOpenAuthModal?: () => void;
   onLogout?: () => void;
+  onForceSync?: () => void;
+  isSyncing?: boolean;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -56,6 +61,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenReportModal,
   onOpenAuthModal,
   onLogout,
+  onForceSync,
+  isSyncing,
 }) => {
   const activeView = currentView || currentTab || 'dashboard';
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -85,6 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'dashboard' as NavTabId, label: 'City Pulse', icon: Activity, badge: `${harmony}%` },
     { id: 'map' as NavTabId, label: 'Eco-Atlas Map', icon: MapPin },
     { id: 'missions' as NavTabId, label: 'Missions', icon: Compass, count: '4 Active' },
+    { id: 'rankings' as NavTabId, label: 'Rankings', icon: Trophy, badge: '🌟 Rising' },
     { id: 'marketplace' as NavTabId, label: 'Rewards Market', icon: ShoppingBag },
     { id: 'profile' as NavTabId, label: 'My Impact', icon: User, rank: `Lvl ${userRank}` },
     { id: 'admin' as NavTabId, label: 'HQ Command', icon: ShieldCheck, isOfficialRestricted: true },
@@ -155,8 +163,14 @@ export const Navbar: React.FC<NavbarProps> = ({
             </nav>
 
             {/* Right Action Bar */}
-            <div className="flex items-center space-x-2 sm:space-x-3.5">
-              
+            <div className="flex items-center space-x-2 sm:space-x-3">
+
+              {/* PWA In-App Install Prompt */}
+              <PWAInstallButton />
+
+              {/* Offline Field Status & Telemetry Cache Indicator */}
+              <OfflineIndicator onForceSync={onForceSync} isSyncing={isSyncing} />
+
               {/* Mindful Audio Toggle */}
               <button
                 onClick={() => {
@@ -300,6 +314,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                         <span>My Stewardship Impact</span>
                       </button>
                       <button
+                        onClick={() => handleNavClick('rankings')}
+                        className="w-full px-3 py-2.5 rounded-lg text-left hover:bg-gray-100 flex items-center space-x-2 text-gray-700 font-semibold transition min-h-[40px]"
+                      >
+                        <Trophy className="w-4 h-4 text-amber-500" />
+                        <span>Community Rankings (Top 10)</span>
+                      </button>
+                      <button
                         onClick={() => handleNavClick('auth')}
                         className="w-full px-3 py-2.5 rounded-lg text-left hover:bg-gray-100 flex items-center space-x-2 text-gray-700 font-semibold transition min-h-[40px]"
                       >
@@ -348,9 +369,9 @@ export const Navbar: React.FC<NavbarProps> = ({
           { id: 'dashboard' as NavTabId, label: 'Pulse', icon: Activity },
           { id: 'map' as NavTabId, label: 'Atlas', icon: MapPin },
           { id: 'missions' as NavTabId, label: 'Missions', icon: Compass },
+          { id: 'rankings' as NavTabId, label: 'Ranks', icon: Trophy },
           { id: 'marketplace' as NavTabId, label: 'Rewards', icon: ShoppingBag },
           { id: 'profile' as NavTabId, label: 'Profile', icon: User },
-          { id: 'admin' as NavTabId, label: isOfficial ? 'HQ Command' : 'HQ Portal', icon: ShieldCheck, isRestricted: !isOfficial },
         ].map((item) => {
           const Icon = item.icon;
           const isActive = activeView === item.id;
@@ -366,9 +387,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <div className="relative">
                 <Icon className={`w-5 h-5 ${isActive ? 'text-[#52b788]' : 'text-[#d8f3dc]/70'}`} />
-                {item.isRestricted && (
-                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-amber-400 rounded-full" />
-                )}
               </div>
               <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[56px]">{item.label}</span>
             </button>

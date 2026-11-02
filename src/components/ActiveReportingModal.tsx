@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, 
   Camera, 
@@ -18,7 +18,14 @@ import {
   Crosshair,
   Compass,
   RotateCcw,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Mic,
+  MicOff,
+  Radio,
+  Volume2,
+  Square,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { CitizenReport, ReportCategory, AIAnalysisResult, Coordinates, LiveLocationState } from '../types';
@@ -47,28 +54,44 @@ const SAMPLE_PRESETS = [
     description: "Spotted a troop of 5 Golden Langurs with a juvenile peacefully crossing the bamboo rope way."
   },
   {
+    title: "Himalayan Cypress Grove Sapling Regeneration",
+    category: "forestry" as ReportCategory,
+    sector: "Sector 6: Sarpang Dzongkhag Heritage Forest",
+    locationName: "Sacred Cypress Ridge Trail",
+    photoUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
+    description: "Inspected native weeping cypress stand. 18 saplings growing vigorous with optimal humus mulch."
+  },
+  {
+    title: "Municipal Solar Lamp & Rain Cistern Inspection",
+    category: "municipal" as ReportCategory,
+    sector: "Sector 1: Mindfulness Spine",
+    locationName: "Promenade Eco-Kiosk 3",
+    photoUrl: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+    description: "Public filtered water tap flowing clear with optimal pressure; solar battery charged at 100%."
+  },
+  {
+    title: "Organic Red Rice Terrace Water Distribution",
+    category: "agriculture" as ReportCategory,
+    sector: "Sector 4: Agri-Tech & Permaculture Terraces",
+    locationName: "Terrace 7 Bio-Gravity Aqueduct",
+    photoUrl: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80",
+    description: "Terrace irrigation channels checked. Even 5cm biological water layer maintained for organic rice."
+  },
+  {
+    title: "Pasture Corridor Indigenous Cattle Grazing",
+    category: "livestock" as ReportCategory,
+    sector: "Sector 5: Royal Heritage & Cultural Sanctuary",
+    locationName: "Upper Pasture Buffer Gate 2",
+    photoUrl: "https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&w=800&q=80",
+    description: "Local Siri cattle grazing harmoniously within pasture fence. Bio-acoustic elephant deterrent verified active."
+  },
+  {
     title: "River Driftwood Debris at Mao Fish Sieve",
     category: "watershed" as ReportCategory,
     sector: "Sector 2: Mao River Watershed & Riparian Corridor",
     locationName: "Mao River Silt Sieve Station",
     photoUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80",
     description: "Heavy mountain runoff washed fallen branches into the downstream fish ladder bypass."
-  },
-  {
-    title: "Organic Vegetable Husk at Market Pavilion",
-    category: "waste" as ReportCategory,
-    sector: "Sector 4: Agri-Tech & Permaculture Terraces",
-    locationName: "Organic Farmers Exchange Stall 8",
-    photoUrl: "https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80",
-    description: "Bags of clean organic produce trimmings ready for transfer to the anaerobic biogas digester."
-  },
-  {
-    title: "Rufous-necked Hornbill Sighting in Heritage Oak",
-    category: "wildlife" as ReportCategory,
-    sector: "Sector 6: Sarpang Dzongkhag Heritage Forest",
-    locationName: "Sacred Oak Canopy Grove",
-    photoUrl: "https://images.unsplash.com/photo-1552728089-57bdde30beb3?auto=format&fit=crop&w=800&q=80",
-    description: "Rare nesting pair spotted in high hollow trunk. Acoustic quiet recommended."
   }
 ];
 
@@ -99,6 +122,174 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
     return { lat: 26.8858, lng: 90.5015 };
   });
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
+
+  // Voice-to-Text State via Browser SpeechRecognition API
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState('');
+  const [speechError, setSpeechError] = useState<string | null>(null);
+  const [voiceTarget, setVoiceTarget] = useState<'description' | 'title'>('description');
+  const [speechLanguage, setSpeechLanguage] = useState<'en-US' | 'en-GB' | 'en-IN'>('en-US');
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSpeech = !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+      setSpeechSupported(hasSpeech);
+    }
+  }, []);
+
+  // Ensure recognition is stopped when component unmounts
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+  }, []);
+
+  const stopVoiceDictation = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (err) {
+        // ignore
+      }
+    }
+    // Commit any remaining interim text
+    if (interimTranscript.trim()) {
+      const remaining = interimTranscript.trim();
+      if (voiceTarget === 'title') {
+        setTitle(prev => (prev ? `${prev} ${remaining}` : remaining));
+      } else {
+        setDescription(prev => (prev ? `${prev} ${remaining}` : remaining));
+      }
+      setInterimTranscript('');
+    }
+    setIsListening(false);
+    playMindfulChime('bell');
+  };
+
+  const startVoiceDictation = (target: 'description' | 'title' = 'description') => {
+    setVoiceTarget(target);
+    setSpeechError(null);
+
+    const SpeechRecognitionClass = 
+      (typeof window !== 'undefined' && 
+       ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) || null;
+
+    if (!SpeechRecognitionClass) {
+      setSpeechError('Speech recognition is not supported in this browser. Please try Chrome, Edge, or Safari.');
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+      }
+
+      const recognition = new SpeechRecognitionClass();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = speechLanguage;
+
+      recognition.onstart = () => {
+        setIsListening(true);
+        setSpeechError(null);
+        playMindfulChime('karma');
+      };
+
+      recognition.onresult = (event: any) => {
+        let currentInterim = '';
+        let currentFinal = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          const item = event.results[i];
+          const text = item[0]?.transcript || '';
+          if (item.isFinal) {
+            currentFinal += text;
+          } else {
+            currentInterim += text;
+          }
+        }
+
+        setInterimTranscript(currentInterim);
+
+        if (currentFinal.trim()) {
+          const newPhrase = currentFinal.trim();
+          if (target === 'title') {
+            setTitle(prev => {
+              const combined = prev ? `${prev.trim()} ${newPhrase}` : newPhrase;
+              return combined.charAt(0).toUpperCase() + combined.slice(1);
+            });
+          } else {
+            setDescription(prev => {
+              const combined = prev ? `${prev.trim()} ${newPhrase}` : newPhrase;
+              return combined.charAt(0).toUpperCase() + combined.slice(1);
+            });
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition error:', event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setSpeechError('Microphone access denied. Please enable microphone permissions in your browser.');
+          setIsListening(false);
+        } else if (event.error === 'no-speech') {
+          setSpeechError('No speech detected. Microphone is active and listening for your voice.');
+        } else if (event.error === 'network') {
+          setSpeechError('Network connectivity interrupted voice transcription. You can continue typing directly.');
+          setIsListening(false);
+        } else if (event.error !== 'aborted') {
+          setSpeechError(`Voice notice: ${event.error}`);
+          setIsListening(false);
+        }
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+        setInterimTranscript('');
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.warn('Failed to start speech recognition:', err);
+      setSpeechError('Could not initialize microphone speech recognition.');
+      setIsListening(false);
+    }
+  };
+
+  const toggleVoiceDictation = (target: 'description' | 'title' = 'description') => {
+    if (isListening) {
+      if (voiceTarget === target) {
+        stopVoiceDictation();
+      } else {
+        stopVoiceDictation();
+        setTimeout(() => startVoiceDictation(target), 200);
+      }
+    } else {
+      startVoiceDictation(target);
+    }
+  };
+
+  const handleModalClose = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.abort();
+      } catch (e) {}
+    }
+    setIsListening(false);
+    setInterimTranscript('');
+    onClose();
+  };
 
   useEffect(() => {
     if (initialCoordinates) {
@@ -257,6 +448,10 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
       }
     };
 
+    if (isListening) {
+      stopVoiceDictation();
+    }
+
     // Confetti & celebratory audio
     confetti({
       particleCount: 75,
@@ -267,7 +462,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
     playMindfulChime('karma');
 
     onSubmitReport(newReport);
-    onClose();
+    handleModalClose();
   };
 
   return (
@@ -287,7 +482,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleModalClose}
             className="p-1.5 rounded-xl text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition shrink-0"
           >
             <X className="w-5 h-5" />
@@ -471,7 +666,24 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
             
             {/* Title */}
             <div className="space-y-1 sm:col-span-2">
-              <label className="block text-xs font-bold text-[#1b4332]">Observation Title *</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-bold text-[#1b4332]">Observation Title *</label>
+                {speechSupported && (
+                  <button
+                    type="button"
+                    onClick={() => toggleVoiceDictation('title')}
+                    className={`px-2 py-0.5 rounded-lg text-[11px] font-bold flex items-center space-x-1.5 transition border ${
+                      isListening && voiceTarget === 'title'
+                        ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-xs'
+                        : 'bg-white text-[#2d6a4f] hover:bg-[#d8f3dc]/60 border-[#52b788]/40'
+                    }`}
+                    title="Narrate title using your voice"
+                  >
+                    <Mic className={`w-3 h-3 ${isListening && voiceTarget === 'title' ? 'text-rose-600 animate-pulse' : 'text-[#2d6a4f]'}`} />
+                    <span>{isListening && voiceTarget === 'title' ? 'Listening...' : 'Voice Title'}</span>
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 required
@@ -491,11 +703,15 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-[#1b4332] focus:outline-none focus:border-[#2d6a4f]"
               >
                 <option value="wildlife">🐾 Wildlife & Biodiversity Observation</option>
+                <option value="forestry">🌲 Forestry Sectors & Canopy Stewardship</option>
+                <option value="municipal">🏛️ Municipal Sectors & Public Services</option>
+                <option value="agriculture">🌾 Agriculture & Permaculture Terraces</option>
+                <option value="livestock">🐂 Livestock, Pastures & Coexistence</option>
                 <option value="watershed">🌊 Watershed & Mao River Health</option>
                 <option value="waste">♻️ Circular Waste / Litter Recovery</option>
                 <option value="hazard">⚠️ Environmental / Forest Hazard</option>
                 <option value="infrastructure">⚡ Clean Energy & Bridge Grid</option>
-                <option value="botanical">🌿 Botanical & Canopy Health</option>
+                <option value="botanical">🌿 Botanical & Rare Flora</option>
               </select>
             </div>
 
@@ -577,16 +793,191 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
               </div>
             </div>
 
-            {/* Description */}
-            <div className="space-y-1 sm:col-span-2">
-              <label className="block text-xs font-bold text-[#1b4332]">Mindful Observation Notes</label>
-              <textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe details, animal behaviors, river flow status, or required field assistance..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs text-[#1b4332] focus:outline-none focus:border-[#2d6a4f]"
-              />
+            {/* Description & Voice-to-Text Studio */}
+            <div className="space-y-2 sm:col-span-2">
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <div className="flex items-center space-x-1.5">
+                  <label className="block text-xs font-bold text-[#1b4332]">Mindful Observation Notes</label>
+                  {isListening && voiceTarget === 'description' && (
+                    <span className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 text-[10px] font-bold animate-pulse">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                      <span>Recording Voice...</span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {/* Language Selector */}
+                  {speechSupported && (
+                    <select
+                      value={speechLanguage}
+                      onChange={(e) => setSpeechLanguage(e.target.value as any)}
+                      disabled={isListening}
+                      className="text-[11px] font-semibold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-1.5 py-0.5 focus:outline-none"
+                      title="Dictation Language"
+                    >
+                      <option value="en-US">English (US)</option>
+                      <option value="en-IN">English (India/Bhutan)</option>
+                      <option value="en-GB">English (UK)</option>
+                    </select>
+                  )}
+
+                  {/* Primary Voice-to-Text Dictation Toggle Button */}
+                  {speechSupported ? (
+                    <button
+                      type="button"
+                      onClick={() => toggleVoiceDictation('description')}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center space-x-1.5 transition shadow-xs ${
+                        isListening && voiceTarget === 'description'
+                          ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-200'
+                          : 'bg-[#1b4332] hover:bg-[#2d6a4f] text-[#d8f3dc]'
+                      }`}
+                      title={isListening && voiceTarget === 'description' ? 'Stop voice recording' : 'Narrate your observation with microphone'}
+                    >
+                      {isListening && voiceTarget === 'description' ? (
+                        <>
+                          <Square className="w-3.5 h-3.5 fill-white text-white" />
+                          <span>Stop Dictation</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-3.5 h-3.5 text-[#52b788]" />
+                          <span>Narrate Notes</span>
+                        </>
+                      )}
+                    </button>
+                  ) : (
+                    <span className="text-[11px] text-gray-400 italic">
+                      Voice input available on Chrome / Safari
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Active Voice Waveform & Live Interim Transcript Display */}
+              {isListening && (
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-[#d8f3dc]/70 via-emerald-50 to-[#d8f3dc]/70 border border-[#52b788] animate-in fade-in duration-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-0.5 h-4 px-1.5 py-0.5 bg-white/80 rounded-md border border-emerald-200">
+                        <span className="w-1 h-2.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                        <span className="w-1 h-3.5 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                        <span className="w-1 h-2 bg-emerald-600 rounded-full animate-bounce [animation-delay:-0.45s]"></span>
+                        <span className="w-1 h-4 bg-emerald-600 rounded-full animate-bounce"></span>
+                      </div>
+                      <span className="text-xs font-bold text-[#1b4332]">
+                        {voiceTarget === 'title' ? 'Narrating Observation Title' : 'Narrating Observation Notes'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center space-x-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (voiceTarget === 'description') {
+                            setDescription(prev => (prev ? `${prev.trim()}. ` : ''));
+                          } else {
+                            setTitle(prev => (prev ? `${prev.trim()}. ` : ''));
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-white border border-gray-200 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+                        title="Add period"
+                      >
+                        + Period (.)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={stopVoiceDictation}
+                        className="px-2 py-0.5 rounded-md bg-rose-600 text-white text-[10px] font-bold hover:bg-rose-700"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Real-time Interim Voice Ticker */}
+                  <div className="p-2 rounded-xl bg-white/90 border border-emerald-200/80 text-xs text-gray-800 font-medium min-h-[38px] flex items-center">
+                    {interimTranscript ? (
+                      <span className="text-emerald-900 font-semibold italic">
+                        "{interimTranscript}..."
+                      </span>
+                    ) : (
+                      <span className="text-gray-400 italic text-[11px] flex items-center space-x-1.5">
+                        <Volume2 className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+                        <span>Speak clearly into your microphone... (GMC Web Speech Engine is active)</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Speech Error Banner if permission denied or network failure */}
+              {speechError && (
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex items-start justify-between space-x-2">
+                  <div className="flex items-start space-x-1.5">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>{speechError}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSpeechError(null)}
+                    className="text-amber-700 hover:text-amber-900 text-xs font-bold"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              {/* Textarea */}
+              <div className="relative">
+                <textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Describe details, animal behaviors, river flow status, or required field assistance (or click 'Narrate Notes' above to speak)..."
+                  className={`w-full px-3.5 py-2.5 rounded-xl border text-xs text-[#1b4332] focus:outline-none transition ${
+                    isListening && voiceTarget === 'description'
+                      ? 'border-[#52b788] bg-emerald-50/20 ring-2 ring-[#52b788]/30'
+                      : 'border-gray-200 focus:border-[#2d6a4f]'
+                  }`}
+                />
+
+                {description && (
+                  <div className="absolute bottom-2 right-2 flex items-center space-x-1.5">
+                    <span className="text-[10px] text-gray-400 bg-white/80 px-1.5 py-0.5 rounded">
+                      {description.split(/\s+/).filter(Boolean).length} words
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setDescription('')}
+                      className="text-[10px] text-gray-400 hover:text-rose-600 bg-white/80 hover:bg-white px-1.5 py-0.5 rounded border border-gray-200 transition"
+                      title="Clear Notes"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Guidance Prompt Chip */}
+              <div className="flex items-center justify-between text-[11px] text-gray-500 pt-0.5">
+                <span className="flex items-center space-x-1 truncate max-w-sm">
+                  <span className="text-gray-400">💡 Voice Tip:</span>
+                  <span className="italic truncate text-gray-600">
+                    "Observed 4 langurs crossing rope bridge near Mao River..."
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sample = "Observed 4 Golden Langurs safely crossing the rope overpass near Mao River. Foliage undisturbed and river flow calm.";
+                    setDescription(prev => prev ? `${prev} ${sample}` : sample);
+                  }}
+                  className="text-[#2d6a4f] hover:underline text-[10px] font-bold shrink-0 ml-1"
+                >
+                  Insert Sample
+                </button>
+              </div>
             </div>
 
           </div>
@@ -612,7 +1003,7 @@ export const ActiveReportingModal: React.FC<ActiveReportingModalProps> = ({
           <div className="flex items-center justify-end space-x-3 pt-3 border-t border-gray-100">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleModalClose}
               className="px-4 py-2.5 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 transition"
             >
               Cancel

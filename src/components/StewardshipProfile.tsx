@@ -22,7 +22,9 @@ import {
   Lock,
   Compass,
   Filter,
-  Eye
+  Eye,
+  Trophy,
+  TrendingUp
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { UserProfile, Badge, CitizenReport, BadgeCategory } from '../types';
@@ -34,6 +36,7 @@ interface StewardshipProfileProps {
   userReports: CitizenReport[];
   onOpenReportModal: () => void;
   onUpdateProfile?: (updatedUser: Partial<UserProfile>) => void;
+  onNavigateToRankings?: () => void;
 }
 
 const PRESET_AVATARS = [
@@ -52,6 +55,7 @@ export const StewardshipProfile: React.FC<StewardshipProfileProps> = ({
   userReports,
   onOpenReportModal,
   onUpdateProfile,
+  onNavigateToRankings,
 }) => {
   const [selectedBadge, setSelectedBadge] = useState<Badge | null>(null);
   const [certificateCopied, setCertificateCopied] = useState(false);
@@ -376,6 +380,37 @@ export const StewardshipProfile: React.FC<StewardshipProfileProps> = ({
               style={{ width: `${progressPercent}%` }}
             />
           </div>
+        </div>
+
+        {/* Community Standing & 24-Hour Trend Indicator */}
+        <div className="mt-4 pt-3.5 border-t border-[#DCC79A]/20 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#081c15]/60 border border-[#DCC79A]/30 flex items-center justify-center text-amber-400">
+              <Trophy className="w-4 h-4 text-amber-400" />
+            </div>
+            <div>
+              <span className="text-[#F4E9D4]/75 text-[10px] uppercase font-bold tracking-wider block">GMC Leaderboard Standing</span>
+              <div className="flex items-center space-x-2">
+                <span className="font-extrabold text-white text-xs sm:text-sm">Rank #4 in Gelephu</span>
+                <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-500/25 border border-emerald-400/50 text-emerald-300 text-[10px] font-black shadow-xs animate-pulse">
+                  <TrendingUp className="w-3 h-3 text-emerald-400" />
+                  <span>▲ +3 in 24h (Rising Star 🌟)</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {onNavigateToRankings && (
+            <button
+              type="button"
+              onClick={onNavigateToRankings}
+              className="px-3.5 py-1.5 rounded-xl bg-[#DCC79A] hover:bg-[#ebd7ab] text-[#1E4D3B] font-extrabold text-xs shadow-md transition flex items-center space-x-1.5 transform hover:scale-105"
+            >
+              <Trophy className="w-3.5 h-3.5 text-[#1E4D3B]" />
+              <span>View Top 10 Rankings</span>
+              <span>→</span>
+            </button>
+          )}
         </div>
       </div>
 

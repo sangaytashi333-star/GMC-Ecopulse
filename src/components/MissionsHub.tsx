@@ -17,13 +17,16 @@ import {
   Crosshair,
   Hourglass,
   ShieldAlert,
-  FileCheck2
+  FileCheck2,
+  WifiOff
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Mission, Coordinates, UserProfile } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
 import { playMindfulChime } from '../utils/audio';
 import { calculateDistanceKm, formatDistance } from '../utils/geo';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { getLastSyncTime } from '../lib/offlineStorage';
 
 interface MissionsHubProps {
   missions: Mission[];
@@ -47,6 +50,7 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
   const [sectorFilter, setSectorFilter] = useState<string>('all');
   const [proposeModalOpen, setProposeModalOpen] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const { isOnline } = useOnlineStatus();
 
   // Propose form state
   const [newTitle, setNewTitle] = useState('');
@@ -166,6 +170,33 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Remote Sector Offline Field Mode Banner */}
+      {!isOnline && (
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-[#FFF3E0] border border-[#FFB74D] text-[#8C3B00] shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <span className="p-2 rounded-xl bg-[#E65100] text-white shadow-sm shrink-0">
+              <WifiOff className="w-5 h-5" />
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold leading-tight uppercase tracking-wider text-[#B25E00]">
+                  Remote Sector Offline Field Mode
+                </p>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-[#E65100] text-white">
+                  Missions Cached
+                </span>
+              </div>
+              <p className="text-xs text-[#9E4700] mt-0.5">
+                Active stewardship missions are preserved locally for offline field operation. Mission enrollments and proposals are queued and will synchronize automatically when reconnecting.
+              </p>
+            </div>
+          </div>
+          <div className="text-[11px] text-[#B25E00] font-medium shrink-0 self-end sm:self-center">
+            Last Synced: {new Date(getLastSyncTime()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+      )}
 
       {/* Hub Mode Tabs */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">

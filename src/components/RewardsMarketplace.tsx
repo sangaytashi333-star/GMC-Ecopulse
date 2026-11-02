@@ -78,7 +78,7 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">The Rewards Marketplace</h2>
           <p className="text-xs sm:text-sm text-[#d8f3dc]/85 leading-relaxed">
-            Redeem your stewardship points for authentic Gelephu experiences—from geothermal hot springs (Tshachu) to zero-emission cableway transit and organic valley harvests.
+            Redeem your stewardship points for authentic Gelephu living benefits—from discount coupons on fresh organic vegetables and local cooperative groceries to clean public transit passes and geothermal hot springs.
           </p>
         </div>
 
@@ -144,8 +144,9 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
           <div className="flex flex-wrap items-center gap-2 text-xs">
             {[
               { id: 'all', label: 'All Rewards' },
+              { id: 'groceries', label: '🥬 Vegetables & Groceries' },
+              { id: 'transit', label: '🚌 Transportation Passes' },
               { id: 'wellness', label: '♨️ Thermal & Wellness' },
-              { id: 'transit', label: '🚠 Clean Mobility' },
               { id: 'market', label: '🧺 Organic Harvest' },
               { id: 'nature', label: '🪴 Nature & Seedlings' },
               { id: 'energy', label: '⚡ Clean Energy Microgrid' },

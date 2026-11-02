@@ -4,7 +4,11 @@ export type ReportCategory =
   | 'hazard' 
   | 'watershed' 
   | 'botanical' 
-  | 'infrastructure';
+  | 'infrastructure'
+  | 'forestry'
+  | 'municipal'
+  | 'agriculture'
+  | 'livestock';
 
 export type ReportStatus = 'pending' | 'dispatched' | 'in-progress' | 'pending_verification' | 'resolved';
 
@@ -71,6 +75,7 @@ export interface CitizenReport {
   photoUrl?: string;
   status: ReportStatus;
   timestamp: string;
+  createdAt?: string;
   reporterName: string;
   isAnonymous?: boolean;
   pointsAwarded: number;
@@ -115,7 +120,7 @@ export interface RewardItem {
   title: string;
   description: string;
   pointsCost: number;
-  category: 'wellness' | 'transit' | 'market' | 'nature' | 'energy';
+  category: 'wellness' | 'transit' | 'market' | 'nature' | 'energy' | 'groceries';
   imageEmoji: string;
   location: string;
   redemptionLimit: number;
@@ -127,6 +132,7 @@ export interface RewardItem {
 export interface RedeemedVoucher {
   id: string;
   rewardId: string;
+  userId?: string;
   title: string;
   pointsSpent?: number;
   pointsPaid?: number;
@@ -162,6 +168,7 @@ export interface Badge {
 }
 
 export interface UserProfile {
+  id?: string;
   name: string;
   email: string;
   role: 'citizen' | 'official' | 'admin';
@@ -211,6 +218,22 @@ export interface CityMetrics {
   harmonyScore: number; // 0 - 100
   aqi: number; // e.g. 18 (Himalayan Crisp)
   pm25: number; // ug/m3
+  uvIndex: number; // UV index, e.g. 3.4
+  uvLevel: 'Low' | 'Moderate' | 'High' | 'Very High' | 'Extreme';
+  radiationUsv: number; // Ambient radiation in µSv/h (e.g. 0.09 - normal safe background)
+  radiationStatus: 'Safe Normal' | 'Elevated' | 'Caution' | 'Hazardous';
+  weather: {
+    tempC: number;
+    condition: string;
+    conditionShort: string;
+    humidity: number;
+    windKmh: number;
+    windDirection: string;
+    barometricHpa: number;
+    solarRadiationWm2: number;
+    rainProbabilityPercent: number;
+    icon: string;
+  };
   renewablePercent: number; // e.g. 98.4%
   solarOutputMw: number;
   hydroOutputMw: number;
@@ -261,3 +284,39 @@ export interface Project108AiMessage {
   mindfulBlessing?: string;
   suggestedAction?: string;
 }
+
+export interface ContributorBadge {
+  id: string;
+  name: string;
+  tier: 'bronze' | 'silver' | 'gold' | 'diamond' | 'mythic';
+  iconEmoji: string;
+  category: 'karma' | 'forest' | 'waste' | 'wildlife' | 'river' | 'energy' | 'resolution' | 'community' | 'mastery';
+}
+
+export interface CommunityRankingContributor {
+  id: string;
+  rank: number;
+  previousRank24h: number; // Rank position 24 hours ago
+  rankChange24h: number;   // Positive = climbed ranks (e.g. +3), 0 = steady, negative = dropped
+  isRisingStar: boolean;   // True if climbed ranks in the last 24h
+  name: string;
+  email?: string;
+  avatarUrl?: string;
+  avatarEmoji?: string;
+  levelTitle: string;
+  levelNumber: number;
+  totalKarmaPoints: number;
+  karmaEarned24h: number;  // Karma points earned in last 24h
+  primarySector: string;
+  specialty: string;
+  treesPlanted: number;
+  wasteRemovedKg: number;
+  wildlifeObservedCount: number;
+  reportsSubmitted: number;
+  missionsCompleted: number;
+  currentStreakDays: number;
+  badges: ContributorBadge[];
+  pinnedBadge?: ContributorBadge;
+  recentHighlight?: string;
+}
+

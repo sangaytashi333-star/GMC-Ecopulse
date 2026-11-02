@@ -1,0 +1,76 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Reports: Ecological observations from forestry, municipal, agriculture, livestock, etc.
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if isValidId(reportId)
+                   && incoming().title is string && incoming().title.size() <= 200
+                   && incoming().category is string && incoming().category.size() <= 60
+                   && incoming().status is string && incoming().status.size() <= 60;
+      allow update: if isValidId(reportId);
+      allow delete: if isSignedIn();
+    }
+
+    // Missions: Collaborative stewardship missions
+    match /missions/{missionId} {
+      allow read: if true;
+      allow create: if isValidId(missionId)
+                   && incoming().title is string && incoming().title.size() <= 200;
+      allow update: if isValidId(missionId);
+      allow delete: if isSignedIn();
+    }
+
+    // Vouchers: Clean transit passes and grocery discount coupons
+    match /vouchers/{voucherId} {
+      allow read: if true;
+      allow create: if isValidId(voucherId)
+                   && incoming().title is string && incoming().title.size() <= 200;
+      allow update: if isValidId(voucherId);
+      allow delete: if isSignedIn();
+    }
+
+    // Users: Profiles, badges, karma scores, rankings
+    match /users/{userId} {
+      allow read: if true;
+      allow create, update: if isValidId(userId)
+                   && incoming().name is string && incoming().name.size() <= 100;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Metrics: Urban Biosphere Vital Signs (UV, Radiation, AQI, Weather)
+    match /metrics/{metricId} {
+      allow read: if true;
+      allow write: if isValidId(metricId);
+    }
+
+    // Test connection document for bootstrap connectivity check
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -5,13 +5,30 @@ import {
   RewardItem, 
   UserProfile, 
   FieldTeam, 
-  CityInsight 
+  CityInsight,
+  CommunityRankingContributor
 } from '../types';
 
 export const INITIAL_CITY_METRICS: CityMetrics = {
   harmonyScore: 92.6,
   aqi: 16, // Himalayan pristine
   pm25: 4.2,
+  uvIndex: 3.4,
+  uvLevel: 'Moderate',
+  radiationUsv: 0.09, // 0.09 µSv/h (pristine natural Himalayan background)
+  radiationStatus: 'Safe Normal',
+  weather: {
+    tempC: 22.4,
+    condition: 'Gentle Himalayan Breeze & Clear Skies',
+    conditionShort: 'Mild & Crisp',
+    humidity: 62,
+    windKmh: 9.2,
+    windDirection: 'NNE from Black Mountains',
+    barometricHpa: 1014.2,
+    solarRadiationWm2: 485,
+    rainProbabilityPercent: 12,
+    icon: '🌤️',
+  },
   renewablePercent: 98.8,
   solarOutputMw: 42.5,
   hydroOutputMw: 118.0,
@@ -27,6 +44,7 @@ export const INITIAL_CITY_METRICS: CityMetrics = {
 };
 
 export const INITIAL_USER_PROFILE: UserProfile = {
+  id: "steward-sangay",
   name: "Sangay Tashi",
   email: "sangaytashi.333@gmail.com",
   role: "citizen",
@@ -334,6 +352,137 @@ export const INITIAL_REPORTS: CitizenReport[] = [
       biodiversityIndexContribution: "+0.10% Circularity",
       carbonCircularityNote: "Expected methane capture: 4.8 kWh equivalent energy."
     }
+  },
+  {
+    id: "rep-006",
+    title: "Sub-Canopy Cypress Grove Health & Sapling Regeneration",
+    description: "Inspected native Himalayan weeping cypress grove in Sector 6. 18 healthy saplings thriving naturally without fungal or pest disruption.",
+    category: "forestry",
+    sector: "Sector 6: Sarpang Dzongkhag Heritage Forest",
+    locationName: "Sacred Cypress Ridge Trail B",
+    coordinates: { lat: 26.8980, lng: 90.5290 },
+    photoUrl: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=800&q=80",
+    status: "resolved",
+    timestamp: "1 hour ago",
+    reporterName: "Sangay Tashi",
+    isAnonymous: false,
+    pointsAwarded: 85,
+    upvotes: 19,
+    userUpvoted: true,
+    aiAnalysis: {
+      verifiedCategory: "Forestry & Native Silviculture",
+      speciesOrItemIdentified: "Cupressus torulosa (Himalayan Cypress)",
+      ecologicalImpactScore: 94,
+      suggestedKarmaPoints: 85,
+      urgencyLevel: "Low",
+      mindfulReflection: "Every cypress standing deep in the Himalayan soil breathes longevity into Bhutan's carbon-negative shield.",
+      actionableRecommendations: [
+        "Logged into GMC Heritage Tree Inventory",
+        "Soil moisture sensor calibrated at 76% optimum",
+        "Ranger perimeter inspection cleared"
+      ],
+      biodiversityIndexContribution: "+0.18% Canopy Density",
+      carbonCircularityNote: "Estimated 240kg lifetime carbon sequestration per mature cypress."
+    },
+    resolvedAt: "10:30 AM"
+  },
+  {
+    id: "rep-007",
+    title: "Solar Smart Lamp & Municipal Rain Barrel Valve Check",
+    description: "Verified the municipal rainwater catchment tap and solar lighting hub on the Sector 1 pedestrian mindfulness lane. Clean water flow confirmed.",
+    category: "municipal",
+    sector: "Sector 1: Mindfulness Spine",
+    locationName: "Spine Promenade Station 3",
+    coordinates: { lat: 26.8860, lng: 90.5050 },
+    photoUrl: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+    status: "resolved",
+    timestamp: "2 hours ago",
+    reporterName: "Dechen Wangmo",
+    isAnonymous: false,
+    pointsAwarded: 60,
+    upvotes: 11,
+    userUpvoted: false,
+    aiAnalysis: {
+      verifiedCategory: "Municipal Services & Public Infrastructure",
+      speciesOrItemIdentified: "Municipal Solar-Powered Eco-Lighting & Rain Tap",
+      ecologicalImpactScore: 82,
+      suggestedKarmaPoints: 60,
+      urgencyLevel: "Low",
+      mindfulReflection: "Mindful municipal stewardship ensures that public commons remain pristine, safe, and welcoming for all.",
+      actionableRecommendations: [
+        "Filtered rainwater tested at 98.2% drinking purity",
+        "Solar battery level verified at 99%",
+        "Public feedback logged with municipal service center"
+      ],
+      biodiversityIndexContribution: "+0.08% Urban Quality",
+      carbonCircularityNote: "Zero-grid solar operation with gravity-fed water."
+    },
+    resolvedAt: "11:15 AM"
+  },
+  {
+    id: "rep-008",
+    title: "Organic Red Rice Terrace Drip Irrigation Balance",
+    description: "Checked water distribution channels across the heritage red rice permaculture terraces. Channel flow evenly aerated with zero chemical runoff.",
+    category: "agriculture",
+    sector: "Sector 4: Agri-Tech Valley",
+    locationName: "Terrace 7 Bio-Gravity Aqueduct",
+    coordinates: { lat: 26.8720, lng: 90.5160 },
+    photoUrl: "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?auto=format&fit=crop&w=800&q=80",
+    status: "in-progress",
+    timestamp: "3 hours ago",
+    reporterName: "Tshering Penjor",
+    isAnonymous: false,
+    pointsAwarded: 75,
+    upvotes: 16,
+    userUpvoted: false,
+    aiAnalysis: {
+      verifiedCategory: "Sustainable Agriculture & Permaculture",
+      speciesOrItemIdentified: "Oryza sativa (Bhutanese Heritage Red Rice)",
+      ecologicalImpactScore: 91,
+      suggestedKarmaPoints: 75,
+      urgencyLevel: "Low",
+      mindfulReflection: "Rooted in mindful agricultural wisdom, our organic fields nurture human health and the microbial sanctity of the soil.",
+      actionableRecommendations: [
+        "Micro-gravity sluice gates positioned to sustain 5cm water table",
+        "Beneficial duckweed layer confirmed healthy for natural weed suppression",
+        "Local farmers notified of upcoming moisture reading"
+      ],
+      biodiversityIndexContribution: "+0.22% Agricultural Biodiversity",
+      carbonCircularityNote: "Pesticide-free organic soil holds 35% more carbon."
+    }
+  },
+  {
+    id: "rep-009",
+    title: "Free-Range Pasture Corridor & Cattle Coexistence Zone",
+    description: "Observed gentle indigenous cattle grazing harmoniously within designated pasture buffer 4. Solar fence gates functioning smoothly without wild predator breach.",
+    category: "livestock",
+    sector: "Sector 5: Royal Heritage & Cultural Sanctuary",
+    locationName: "Upper Pasture Buffer Gate 2",
+    coordinates: { lat: 26.8790, lng: 90.5280 },
+    photoUrl: "https://images.unsplash.com/photo-1546445317-29f4545e9d53?auto=format&fit=crop&w=800&q=80",
+    status: "resolved",
+    timestamp: "4 hours ago",
+    reporterName: "Namgay Lhamo",
+    isAnonymous: false,
+    pointsAwarded: 70,
+    upvotes: 13,
+    userUpvoted: true,
+    aiAnalysis: {
+      verifiedCategory: "Livestock Management & Coexistence",
+      speciesOrItemIdentified: "Bos indicus (Bhutanese Siri Cattle & Pasture Coexistence)",
+      ecologicalImpactScore: 86,
+      suggestedKarmaPoints: 70,
+      urgencyLevel: "Low",
+      mindfulReflection: "Harmonious coexistence between pastoral heritage and wild animal migration is the heart of compassionate Bhutanese ecology.",
+      actionableRecommendations: [
+        "Bio-acoustic deterrent verified operational for elephant corridor buffer",
+        "Pasture rotational grazing markers in place",
+        "Manure composting integration active"
+      ],
+      biodiversityIndexContribution: "+0.14% Agro-Pastoral Balance",
+      carbonCircularityNote: "Pasture manure collected directly for anaerobic biogas generation."
+    },
+    resolvedAt: "08:45 AM"
   }
 ];
 
@@ -436,16 +585,16 @@ export const INITIAL_REWARDS: RewardItem[] = [
   },
   {
     id: "rew-002",
-    title: "GMC Autonomous Eco-Transit & Cableway Monthly Pass",
-    description: "Unlimited rides on all 100% solar-powered autonomous electric pods, river shuttles, and scenic Himalayan canopy cableways across all 7 sectors.",
-    pointsCost: 350,
+    title: "Gelephu Clean Transportation Multi-Ride Pass (10 Rides)",
+    description: "Multi-ride public transit voucher valid across all zero-emission municipal electric buses, valley connector shuttles, and solar commuter lines.",
+    pointsCost: 140,
     category: "transit",
-    imageEmoji: "🚠",
-    location: "All GMC Stations & Skyway Terminals",
-    redemptionLimit: 100,
-    remainingCount: 74,
-    highlightTag: "Clean Mobility",
-    terms: "Instant digital activation on your GMC Smart Transit ID. Valid for 30 consecutive days."
+    imageEmoji: "🚌",
+    location: "All Gelephu Bus Terminals & E-Shuttle Stops",
+    redemptionLimit: 120,
+    remainingCount: 88,
+    highlightTag: "Clean Public Transit",
+    terms: "Show digital QR code to bus validator. Valid for 10 trips across all 7 sectors with no expiration."
   },
   {
     id: "rew-003",
@@ -514,15 +663,29 @@ export const INITIAL_REWARDS: RewardItem[] = [
   },
   {
     id: "rew-008",
-    title: "Mindfulness Tea Pavilion Sacred Tasting Flight",
-    description: "Curated ceremony sampling rare high-altitude white teas, ginger infusions, and cordyceps nectar accompanied by singing bowl acoustics.",
-    pointsCost: 180,
-    category: "wellness",
-    imageEmoji: "🍵",
-    location: "Mindfulness Bridge Pavilion 1",
-    redemptionLimit: 60,
-    remainingCount: 45,
-    terms: "Valid any afternoon between 14:00 - 18:00."
+    title: "Fresh Organic Vegetables 30% Off Discount Coupon",
+    description: "30% off any purchase of local organic vegetables, fresh Himalayan greens, red chillies, and root harvest at Gelephu Farmers Markets and vegetable stalls.",
+    pointsCost: 80,
+    category: "groceries",
+    imageEmoji: "🥬",
+    location: "Gelephu Sunday Farmers Market & Sector 4 Stalls",
+    redemptionLimit: 150,
+    remainingCount: 114,
+    highlightTag: "Fresh Organic Veggies",
+    terms: "Present QR voucher at merchant checkout. Applicable to fresh vegetables only. Valid for 45 days."
+  },
+  {
+    id: "rew-009",
+    title: "GMC Cooperative Groceries 25% Off Coupon",
+    description: "25% discount voucher on everyday staples, organic Bhutanese red rice, cold-pressed mustard oil, pulses, and pantry essentials.",
+    pointsCost: 100,
+    category: "groceries",
+    imageEmoji: "🛒",
+    location: "GMC Green Grocery Cooperative & Village Outlets",
+    redemptionLimit: 100,
+    remainingCount: 78,
+    highlightTag: "Staple Groceries",
+    terms: "Single-use discount coupon across participating cooperative grocery stores in Gelephu. Valid for 60 days."
   }
 ];
 
@@ -687,4 +850,353 @@ export const PROJECT_108_BRIDGES = [
 ];
 
 export const INITIAL_USER = INITIAL_USER_PROFILE;
+
+export const INITIAL_TOP_CONTRIBUTORS: CommunityRankingContributor[] = [
+  {
+    id: "contributor-1",
+    rank: 1,
+    previousRank24h: 1,
+    rankChange24h: 0,
+    isRisingStar: false,
+    name: "Karma Wangchuk",
+    avatarEmoji: "🏔️",
+    levelTitle: "Grand Himalayan Luminary",
+    levelNumber: 7,
+    totalKarmaPoints: 4890,
+    karmaEarned24h: 110,
+    primarySector: "Sector 1: Mindfulness Spine & Central Bridge",
+    specialty: "Mao River Hydro-Ecosystem Architect & Sacred Grove Restoration",
+    treesPlanted: 164,
+    wasteRemovedKg: 310.5,
+    wildlifeObservedCount: 94,
+    reportsSubmitted: 62,
+    missionsCompleted: 28,
+    currentStreakDays: 48,
+    recentHighlight: "Calibrated hydro-purity telemetry node along Central Bridge",
+    pinnedBadge: {
+      id: "badge-108-visionary",
+      name: "108 Visionary Luminary",
+      tier: "mythic",
+      iconEmoji: "✨",
+      category: "karma"
+    },
+    badges: [
+      { id: "b1", name: "108 Visionary Luminary", tier: "mythic", iconEmoji: "✨", category: "karma" },
+      { id: "b2", name: "Himalayan Guardian", tier: "gold", iconEmoji: "🏔️", category: "karma" },
+      { id: "b3", name: "Master Watershed Sentinel", tier: "diamond", iconEmoji: "🌊", category: "river" },
+      { id: "b4", name: "Ancient Forest Patriarch", tier: "gold", iconEmoji: "🌲", category: "forest" }
+    ]
+  },
+  {
+    id: "contributor-2",
+    rank: 2,
+    previousRank24h: 5,
+    rankChange24h: 3,
+    isRisingStar: true,
+    name: "Dechen Zangmo",
+    avatarEmoji: "🌸",
+    levelTitle: "Sentinel of the Living Forest",
+    levelNumber: 6,
+    totalKarmaPoints: 3840,
+    karmaEarned24h: 420,
+    primarySector: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway",
+    specialty: "Phibsoo Elephant Corridor Buffer Restoration & Rewilding",
+    treesPlanted: 128,
+    wasteRemovedKg: 185.0,
+    wildlifeObservedCount: 78,
+    reportsSubmitted: 54,
+    missionsCompleted: 22,
+    currentStreakDays: 31,
+    recentHighlight: "Spearheaded 24h bio-corridor revegetation planting 40 saplings",
+    pinnedBadge: {
+      id: "badge-forest-guardian",
+      name: "Forest Guardian",
+      tier: "gold",
+      iconEmoji: "🌲",
+      category: "forest"
+    },
+    badges: [
+      { id: "b5", name: "Forest Guardian", tier: "gold", iconEmoji: "🌲", category: "forest" },
+      { id: "b6", name: "Elephant Highway Sentinel", tier: "diamond", iconEmoji: "🐘", category: "wildlife" },
+      { id: "b7", name: "Waste Warrior", tier: "silver", iconEmoji: "♻️", category: "waste" },
+      { id: "b8", name: "Civic Resolution Ace", tier: "gold", iconEmoji: "🎯", category: "resolution" }
+    ]
+  },
+  {
+    id: "contributor-3",
+    rank: 3,
+    previousRank24h: 3,
+    rankChange24h: 0,
+    isRisingStar: false,
+    name: "Tenzin Norbu",
+    avatarEmoji: "🌊",
+    levelTitle: "Highland Watershed Master",
+    levelNumber: 6,
+    totalKarmaPoints: 3420,
+    karmaEarned24h: 80,
+    primarySector: "Sector 2: Mao River Watershed & Riparian Corridor",
+    specialty: "Mao River Thermal Purity & Water Filtration Array",
+    treesPlanted: 82,
+    wasteRemovedKg: 142.0,
+    wildlifeObservedCount: 61,
+    reportsSubmitted: 48,
+    missionsCompleted: 19,
+    currentStreakDays: 26,
+    recentHighlight: "Verified Class-A pristine water purity indices at Bridge #54",
+    pinnedBadge: {
+      id: "badge-river-guardian",
+      name: "River Guardian",
+      tier: "diamond",
+      iconEmoji: "🌊",
+      category: "river"
+    },
+    badges: [
+      { id: "b9", name: "River Guardian", tier: "diamond", iconEmoji: "🌊", category: "river" },
+      { id: "b10", name: "Himalayan Guardian", tier: "gold", iconEmoji: "🏔️", category: "karma" },
+      { id: "b11", name: "Hydro-Telemetry Specialist", tier: "gold", iconEmoji: "💧", category: "river" },
+      { id: "b12", name: "Waste Warrior", tier: "silver", iconEmoji: "♻️", category: "waste" }
+    ]
+  },
+  {
+    id: "contributor-4",
+    rank: 4,
+    previousRank24h: 7,
+    rankChange24h: 3,
+    isRisingStar: true,
+    name: "Sangay Tashi",
+    email: "sangaytashi.333@gmail.com",
+    avatarEmoji: "🌲",
+    levelTitle: "Senior Forest Steward",
+    levelNumber: 4,
+    totalKarmaPoints: 1480,
+    karmaEarned24h: 310,
+    primarySector: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway",
+    specialty: "Golden Langur Habitat Monitor & Watershed Steward",
+    treesPlanted: 52,
+    wasteRemovedKg: 68.5,
+    wildlifeObservedCount: 37,
+    reportsSubmitted: 24,
+    missionsCompleted: 9,
+    currentStreakDays: 14,
+    recentHighlight: "Resolved critical plastic blockage and logged 3 new Langur sightings",
+    pinnedBadge: {
+      id: "badge-forest-guardian",
+      name: "Forest Guardian",
+      tier: "gold",
+      iconEmoji: "🌲",
+      category: "forest"
+    },
+    badges: [
+      { id: "b13", name: "Himalayan Guardian", tier: "gold", iconEmoji: "🏔️", category: "karma" },
+      { id: "b14", name: "Forest Guardian", tier: "gold", iconEmoji: "🌲", category: "forest" },
+      { id: "b15", name: "Waste Warrior", tier: "silver", iconEmoji: "♻️", category: "waste" },
+      { id: "b16", name: "River Guardian", tier: "gold", iconEmoji: "🌊", category: "river" }
+    ]
+  },
+  {
+    id: "contributor-5",
+    rank: 5,
+    previousRank24h: 4,
+    rankChange24h: -1,
+    isRisingStar: false,
+    name: "Pema Lhamo",
+    avatarEmoji: "🐾",
+    levelTitle: "Wildlife Sentinel Pioneer",
+    levelNumber: 5,
+    totalKarmaPoints: 2850,
+    karmaEarned24h: 45,
+    primarySector: "Sector 5: Royal Manas Biodiversity Gateway",
+    specialty: "Great Hornbill Nesting Monitoring & Canopy Sensors",
+    treesPlanted: 64,
+    wasteRemovedKg: 95.0,
+    wildlifeObservedCount: 112,
+    reportsSubmitted: 42,
+    missionsCompleted: 16,
+    currentStreakDays: 22,
+    recentHighlight: "Documented nesting pair of Great Hornbills in old-growth ficus",
+    pinnedBadge: {
+      id: "badge-wildlife-sentinel",
+      name: "Wildlife Sentinel",
+      tier: "diamond",
+      iconEmoji: "🦅",
+      category: "wildlife"
+    },
+    badges: [
+      { id: "b17", name: "Wildlife Sentinel", tier: "diamond", iconEmoji: "🦅", category: "wildlife" },
+      { id: "b18", name: "Himalayan Guardian", tier: "gold", iconEmoji: "🏔️", category: "karma" },
+      { id: "b19", name: "Forest Guardian", tier: "silver", iconEmoji: "🌲", category: "forest" }
+    ]
+  },
+  {
+    id: "contributor-6",
+    rank: 6,
+    previousRank24h: 9,
+    rankChange24h: 3,
+    isRisingStar: true,
+    name: "Sonam Tobgay",
+    avatarEmoji: "♻️",
+    levelTitle: "Circular Biomass Champion",
+    levelNumber: 5,
+    totalKarmaPoints: 2420,
+    karmaEarned24h: 390,
+    primarySector: "Sector 7: Circular Bio-Economy & Composting Hub",
+    specialty: "GMC Biogas Closed-Loop Organic Processing & Composting",
+    treesPlanted: 46,
+    wasteRemovedKg: 284.0,
+    wildlifeObservedCount: 24,
+    reportsSubmitted: 38,
+    missionsCompleted: 14,
+    currentStreakDays: 19,
+    recentHighlight: "Diverted 85kg industrial biomass into organic fertilizer pellets",
+    pinnedBadge: {
+      id: "badge-waste-warrior",
+      name: "Waste Warrior",
+      tier: "diamond",
+      iconEmoji: "♻️",
+      category: "waste"
+    },
+    badges: [
+      { id: "b20", name: "Waste Warrior", tier: "diamond", iconEmoji: "♻️", category: "waste" },
+      { id: "b21", name: "Civic Resolver", tier: "gold", iconEmoji: "🎯", category: "resolution" },
+      { id: "b22", name: "Clean Energy Pioneer", tier: "silver", iconEmoji: "⚡", category: "energy" }
+    ]
+  },
+  {
+    id: "contributor-7",
+    rank: 7,
+    previousRank24h: 5,
+    rankChange24h: -2,
+    isRisingStar: false,
+    name: "Kinley Dorji",
+    avatarEmoji: "⚡",
+    levelTitle: "Solar Grid & Clean Energy Pioneer",
+    levelNumber: 5,
+    totalKarmaPoints: 2210,
+    karmaEarned24h: 60,
+    primarySector: "Sector 4: Agri-Tech & Permaculture Terraces",
+    specialty: "Agri-Terrace Photovoltaic Microgrid Diagnostics",
+    treesPlanted: 39,
+    wasteRemovedKg: 52.0,
+    wildlifeObservedCount: 18,
+    reportsSubmitted: 31,
+    missionsCompleted: 11,
+    currentStreakDays: 17,
+    recentHighlight: "Installed 4 automated smart solar telemetry nodes on Bridge #81",
+    pinnedBadge: {
+      id: "badge-clean-energy",
+      name: "Clean Energy Pioneer",
+      tier: "gold",
+      iconEmoji: "⚡",
+      category: "energy"
+    },
+    badges: [
+      { id: "b23", name: "Clean Energy Pioneer", tier: "gold", iconEmoji: "⚡", category: "energy" },
+      { id: "b24", name: "Himalayan Guardian", tier: "silver", iconEmoji: "🏔️", category: "karma" },
+      { id: "b25", name: "Civic Resolver", tier: "silver", iconEmoji: "🎯", category: "resolution" }
+    ]
+  },
+  {
+    id: "contributor-8",
+    rank: 8,
+    previousRank24h: 10,
+    rankChange24h: 2,
+    isRisingStar: true,
+    name: "Chimi Dema",
+    avatarEmoji: "🌿",
+    levelTitle: "Riparian Buffer Scout",
+    levelNumber: 4,
+    totalKarmaPoints: 2050,
+    karmaEarned24h: 260,
+    primarySector: "Sector 2: Mao River Watershed & Riparian Corridor",
+    specialty: "Mao River Embankment Bamboo Bio-Engineering",
+    treesPlanted: 58,
+    wasteRemovedKg: 73.0,
+    wildlifeObservedCount: 29,
+    reportsSubmitted: 27,
+    missionsCompleted: 10,
+    currentStreakDays: 13,
+    recentHighlight: "Planted 30 bamboo clusters to stabilize monsoon riverbank slope",
+    pinnedBadge: {
+      id: "badge-river-guardian",
+      name: "River Guardian",
+      tier: "gold",
+      iconEmoji: "🌊",
+      category: "river"
+    },
+    badges: [
+      { id: "b26", name: "River Guardian", tier: "gold", iconEmoji: "🌊", category: "river" },
+      { id: "b27", name: "Forest Guardian", tier: "silver", iconEmoji: "🌲", category: "forest" },
+      { id: "b28", name: "Civic Resolver", tier: "silver", iconEmoji: "🎯", category: "resolution" }
+    ]
+  },
+  {
+    id: "contributor-9",
+    rank: 9,
+    previousRank24h: 7,
+    rankChange24h: -2,
+    isRisingStar: false,
+    name: "Tshering Yangzom",
+    avatarEmoji: "🪷",
+    levelTitle: "Alpine Medicinal Botanist",
+    levelNumber: 4,
+    totalKarmaPoints: 1980,
+    karmaEarned24h: 30,
+    primarySector: "Sector 6: Sarpang Dzongkhag Heritage Forest",
+    specialty: "Sub-Himalayan Rare Orchid & Herbal Seed Bank",
+    treesPlanted: 41,
+    wasteRemovedKg: 34.0,
+    wildlifeObservedCount: 35,
+    reportsSubmitted: 29,
+    missionsCompleted: 8,
+    currentStreakDays: 11,
+    recentHighlight: "Catalogued 6 indigenous medicinal fern colonies in sacred grove",
+    pinnedBadge: {
+      id: "badge-forest-guardian",
+      name: "Forest Guardian",
+      tier: "gold",
+      iconEmoji: "🌲",
+      category: "forest"
+    },
+    badges: [
+      { id: "b29", name: "Forest Guardian", tier: "gold", iconEmoji: "🌲", category: "forest" },
+      { id: "b30", name: "Wildlife Sentinel", tier: "silver", iconEmoji: "🐾", category: "wildlife" },
+      { id: "b31", name: "Himalayan Guardian", tier: "silver", iconEmoji: "🏔️", category: "karma" }
+    ]
+  },
+  {
+    id: "contributor-10",
+    rank: 10,
+    previousRank24h: 12,
+    rankChange24h: 2,
+    isRisingStar: true,
+    name: "Ugyen Namgyel",
+    avatarEmoji: "🐒",
+    levelTitle: "Biodiversity Corridor Sentinel",
+    levelNumber: 4,
+    totalKarmaPoints: 1870,
+    karmaEarned24h: 290,
+    primarySector: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway",
+    specialty: "Langur Arboreal Canopy Overpass Safety Inspector",
+    treesPlanted: 34,
+    wasteRemovedKg: 42.0,
+    wildlifeObservedCount: 49,
+    reportsSubmitted: 26,
+    missionsCompleted: 9,
+    currentStreakDays: 15,
+    recentHighlight: "Secured safe crossing of 14 langurs across Bridge #27",
+    pinnedBadge: {
+      id: "badge-wildlife-sentinel",
+      name: "Wildlife Sentinel",
+      tier: "gold",
+      iconEmoji: "🐒",
+      category: "wildlife"
+    },
+    badges: [
+      { id: "b32", name: "Wildlife Sentinel", tier: "gold", iconEmoji: "🐒", category: "wildlife" },
+      { id: "b33", name: "Forest Guardian", tier: "silver", iconEmoji: "🌲", category: "forest" },
+      { id: "b34", name: "Waste Warrior", tier: "silver", iconEmoji: "♻️", category: "waste" }
+    ]
+  }
+];
+
 

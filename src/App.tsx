@@ -1,15 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Navbar, NavTabId } from './components/Navbar';
 import { CityPulseDashboard } from './components/CityPulseDashboard';
 import { InteractiveEcoMap } from './components/InteractiveEcoMap';
 import { MissionsHub } from './components/MissionsHub';
 import { StewardshipProfile } from './components/StewardshipProfile';
 import { RewardsMarketplace } from './components/RewardsMarketplace';
+import { CommunityRankings } from './components/CommunityRankings';
 import { AdminPortal } from './components/AdminPortal';
 import { AuthScreen } from './components/AuthScreen';
 import { ActiveReportingModal } from './components/ActiveReportingModal';
-import { ReportDetailModal } from './components/ReportDetailModal';
 import { FixResolutionModal } from './components/FixResolutionModal';
+import { ReportDetailModal } from './components/ReportDetailModal';
+import { 
+  getCachedMetrics, 
+  saveCachedMetrics, 
+  getCachedMissions, 
+  saveCachedMissions, 
+  queueOfflineAction, 
+  getQueuedActions, 
+  clearQueuedActions 
+} from './lib/offlineStorage';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { 
   INITIAL_CITY_METRICS, 
   INITIAL_REPORTS, 
@@ -17,7 +28,8 @@ import {
   INITIAL_REWARDS, 
   INITIAL_USER, 
   INITIAL_FIELD_TEAMS,
-  INITIAL_CITY_INSIGHT
+  INITIAL_CITY_INSIGHT,
+  INITIAL_TOP_CONTRIBUTORS
 } from './data/initialData';
 import { 
   CitizenReport, 
@@ -36,6 +48,22 @@ import { playMindfulChime, toggleSoundMute, isSoundMuted } from './utils/audio';
 import { useLiveLocation } from './hooks/useLiveLocation';
 import gmcMindfulMistBg from './assets/images/gmc_mindful_mist_bg_1787762128131.jpg';
 import gmc108MandalaBg from './assets/images/gmc_108_mandala_bg_1787762140396.jpg';
+import { 
+  testConnection, 
+  seedInitialFirestoreData, 
+  subscribeToReports, 
+  subscribeToMissions, 
+  subscribeToVouchers, 
+  subscribeToMetrics, 
+  subscribeToUsers,
+  saveReportToFirestore, 
+  updateReportInFirestore, 
+  updateMissionInFirestore, 
+  saveVoucherToFirestore, 
+  saveUserToFirestore,
+  db
+} from './lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 const STORAGE_AUTH_KEY = 'gmc_citizen_auth_user';
 const SESSION_AUTH_KEY = 'gmc_citizen_session_authenticated';
@@ -55,7 +83,8 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState<NavTabId>('map');
   const [reports, setReports] = useState<CitizenReport[]>(INITIAL_REPORTS);
-  const [missions, setMissions] = useState<Mission[]>(INITIAL_MISSIONS);
+  // Initialized from offline cache to support instant boot in remote forest sectors
+  const [missions, setMissions] = useState<Mission[]>(() => getCachedMissions());
   const [rewards, setRewards] = useState<RewardItem[]>(INITIAL_REWARDS);
   
   // Real-time Geolocation Hook with real-time GPS & simulation capabilities
@@ -77,9 +106,11 @@ export default function App() {
     return INITIAL_USER;
   });
 
-  const [metrics, setMetrics] = useState<CityMetrics>(INITIAL_CITY_METRICS);
+  // Critical City Metrics initialized from offline cache
+  const [metrics, setMetrics] = useState<CityMetrics>(() => getCachedMetrics());
   const [cityInsight, setCityInsight] = useState<CityInsight>(INITIAL_CITY_INSIGHT);
   const [fieldTeams, setFieldTeams] = useState<FieldTeam[]>(INITIAL_FIELD_TEAMS);
+  const [topContributors, setTopContributors] = useState(INITIAL_TOP_CONTRIBUTORS);
   const [redeemedVouchers, setRedeemedVouchers] = useState<RedeemedVoucher[]>([
     {
       id: 'v-initial-1',
@@ -119,7 +150,11 @@ export default function App() {
     }
   ]);
 
-  // Persist user changes
+  // Online / Offline Connectivity & Remote Sector Sync State
+  const { isOnline } = useOnlineStatus();
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Persist user changes locally & sync with Firestore
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_AUTH_KEY, JSON.stringify(user));
@@ -127,6 +162,154 @@ export default function App() {
       console.warn('Storage write error:', e);
     }
   }, [user]);
+
+  // Synchronize critical city metrics to offline storage whenever updated
+  useEffect(() => {
+    if (metrics) {
+      saveCachedMetrics(metrics);
+    }
+  }, [metrics]);
+
+  // Synchronize active community missions to offline storage whenever updated
+  useEffect(() => {
+    if (missions && missions.length > 0) {
+      saveCachedMissions(missions);
+    }
+  }, [missions]);
+
+  // Flush queued offline actions to Firestore when network is available
+  const handleSyncOfflineData = useCallback(async () => {
+    const queuedActions = getQueuedActions();
+    if (queuedActions.length === 0) return;
+
+    setIsSyncing(true);
+    try {
+      for (const action of queuedActions) {
+        if (action.type === 'join_mission') {
+          const { missionId, currentParticipants } = action.payload;
+          await updateMissionInFirestore(missionId, { currentParticipants });
+        }
+      }
+      clearQueuedActions();
+      playMindfulChime('karma');
+      setNotifications(prev => [
+        {
+          id: `notif-sync-${Date.now()}`,
+          title: '🌱 Remote Field Data Synchronized',
+          message: `${queuedActions.length} field action(s) successfully synced with GMC Central Mesh.`,
+          time: 'Just now',
+          read: false
+        },
+        ...prev
+      ]);
+    } catch (err) {
+      console.warn('Sync error:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, []);
+
+  // Automatically flush offline action queue when connectivity is restored
+  useEffect(() => {
+    if (isOnline) {
+      handleSyncOfflineData();
+    }
+  }, [isOnline, handleSyncOfflineData]);
+
+  // Firebase Real-time Multi-User Sync for Reports, Missions, Vouchers, Metrics, and Leaderboards
+  useEffect(() => {
+    // 1. Verify Firestore connectivity
+    testConnection();
+
+    // 2. Seed initial data if database collections are empty
+    seedInitialFirestoreData();
+
+    // 3. Register current user in Firestore
+    saveUserToFirestore(user).catch(console.error);
+
+    // 4. Real-time reports stream
+    const unsubReports = subscribeToReports((liveReports) => {
+      if (liveReports && liveReports.length > 0) {
+        setReports(liveReports);
+      }
+    });
+
+    // 5. Real-time missions stream
+    const unsubMissions = subscribeToMissions((liveMissions) => {
+      if (liveMissions && liveMissions.length > 0) {
+        setMissions(liveMissions);
+      }
+    });
+
+    // 6. Real-time vouchers stream
+    const unsubVouchers = subscribeToVouchers((liveVouchers) => {
+      if (liveVouchers && liveVouchers.length > 0) {
+        const myVouchers = liveVouchers.filter(v => !v.userId || v.userId === user.id || v.userId === user.email);
+        if (myVouchers.length > 0) {
+          setRedeemedVouchers(myVouchers);
+        }
+      }
+    });
+
+    // 7. Real-time biosphere metrics stream
+    const unsubMetrics = subscribeToMetrics((liveMetrics) => {
+      if (liveMetrics) {
+        setMetrics(liveMetrics);
+      }
+    });
+
+    // 8. Real-time user accounts & community rankings stream
+    const unsubUsers = subscribeToUsers((liveUsers) => {
+      if (liveUsers && liveUsers.length > 0) {
+        const mapped = liveUsers
+          .map((u, i) => ({
+            id: u.id || `user-${i}`,
+            rank: i + 1,
+            previousRank24h: i + 1,
+            rankChange24h: 0,
+            isRisingStar: (u.totalKarmaPoints || 0) >= 300,
+            name: u.name,
+            avatarEmoji: u.avatarEmoji || '🌿',
+            avatarUrl: u.avatarUrl,
+            levelTitle: u.levelTitle || 'Forest Steward',
+            levelNumber: u.levelNumber || 1,
+            totalKarmaPoints: u.totalKarmaPoints || 0,
+            karmaEarned24h: 120,
+            primarySector: 'Sector 2: Mao River Riparian Corridor',
+            specialty: u.badges?.[0]?.name || 'Sub-Himalayan Ecological Steward',
+            treesPlanted: u.treesPlanted || 12,
+            wasteRemovedKg: u.wasteRemovedKg || 8,
+            wildlifeObservedCount: u.wildlifeObservedCount || 6,
+            reportsSubmitted: u.totalReportsCount || 1,
+            reportsResolved: u.reportsResolvedCount || 0,
+            currentStreakDays: 9,
+            recentHighlight: 'Verified community report in Gelephu',
+            pinnedBadge: u.badges?.[0] || {
+              id: 'badge-steward',
+              name: 'Mindful Steward',
+              tier: 'gold' as const,
+              iconEmoji: '🌱',
+              category: 'general'
+            },
+            badges: u.badges || []
+          }))
+          .sort((a, b) => b.totalKarmaPoints - a.totalKarmaPoints)
+          .map((c, idx) => ({ ...c, rank: idx + 1 }));
+
+        if (mapped.length >= 3) {
+          setTopContributors(mapped);
+        }
+      }
+    });
+
+    return () => {
+      unsubReports();
+      unsubMissions();
+      unsubVouchers();
+      unsubMetrics();
+      unsubUsers();
+    };
+  }, [user.id, user.email]);
 
   // Scroll to top on view changes
   useEffect(() => {
@@ -197,13 +380,17 @@ export default function App() {
 
   // Submit new report
   const handleSubmitReport = (newReport: CitizenReport) => {
+    // Optimistic local update
     setReports(prev => [newReport, ...prev]);
+
+    // Persist report to Firestore so all users see it in real-time
+    saveReportToFirestore(newReport).catch(console.error);
 
     // Update user profile impact
     setUser(prev => {
       const currentStats = prev.stats || {};
       const currentReports = prev.totalReportsCount || 0;
-      return {
+      const updatedUser: UserProfile = {
         ...prev,
         spendablePoints: (prev.spendablePoints || 0) + newReport.pointsAwarded,
         totalKarmaPoints: (prev.totalKarmaPoints || 0) + newReport.pointsAwarded,
@@ -216,6 +403,8 @@ export default function App() {
           reportsResolved: currentStats.reportsResolved || prev.reportsResolvedCount || 0
         }
       };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
     });
 
     // Add Notification
@@ -223,8 +412,8 @@ export default function App() {
     setNotifications(prev => [
       {
         id: notifId,
-        title: 'Report Logged & Verified',
-        message: `Earned +${newReport.pointsAwarded} Karma for ${newReport.title}`,
+        title: 'Report Logged & Synced',
+        message: `Earned +${newReport.pointsAwarded} Karma for ${newReport.title}. Shared to GMC Telemetry.`,
         time: 'Just now',
         read: false
       },
@@ -240,11 +429,25 @@ export default function App() {
           const joined = !m.joined;
           const currentParticipants = joined ? m.currentParticipants + 1 : Math.max(0, m.currentParticipants - 1);
           
+          // Optimistically record offline action for remote sector offline resilience
+          queueOfflineAction({
+            type: 'join_mission',
+            payload: { missionId, joined, currentParticipants },
+            sector: m.sector
+          });
+
+          // Persist mission state to Firestore (syncs immediately if online or queues if offline)
+          updateMissionInFirestore(missionId, {
+            currentParticipants
+          }).catch((err) => {
+            console.warn('Mission action saved to remote offline cache:', err);
+          });
+
           if (joined) {
             // Give steward participation karma
             setUser(u => {
               const currentMissions = u.totalMissionsCount || u.missionsCompleted || 0;
-              return {
+              const updatedUser: UserProfile = {
                 ...u,
                 spendablePoints: (u.spendablePoints || 0) + m.rewardPoints,
                 totalKarmaPoints: (u.totalKarmaPoints || 0) + m.rewardPoints,
@@ -252,6 +455,8 @@ export default function App() {
                 missionsCompleted: currentMissions + 1,
                 treesPlanted: m.category === 'revegetation' ? (u.treesPlanted || 0) + 5 : (u.treesPlanted || 0)
               };
+              saveUserToFirestore(updatedUser).catch(console.error);
+              return updatedUser;
             });
 
             const joinNotifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -277,11 +482,16 @@ export default function App() {
   // Propose mission
   const handleCreateMission = (newMission: Mission) => {
     setMissions(prev => [newMission, ...prev]);
-    setUser(u => ({
-      ...u,
-      spendablePoints: u.spendablePoints + 50,
-      totalKarmaPoints: u.totalKarmaPoints + 50,
-    }));
+    setDoc(doc(db, 'missions', newMission.id), newMission).catch(console.error);
+    setUser(u => {
+      const updatedUser: UserProfile = {
+        ...u,
+        spendablePoints: u.spendablePoints + 50,
+        totalKarmaPoints: u.totalKarmaPoints + 50,
+      };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
+    });
   };
 
   // Redeem Reward
@@ -289,14 +499,18 @@ export default function App() {
     if (user.spendablePoints < reward.pointsCost) return false;
 
     // Deduct points
-    setUser(prev => ({
-      ...prev,
-      spendablePoints: prev.spendablePoints - reward.pointsCost
-    }));
+    setUser(prev => {
+      const updatedUser: UserProfile = {
+        ...prev,
+        spendablePoints: prev.spendablePoints - reward.pointsCost
+      };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
+    });
 
     // Create unique voucher pass
     const randomHex = Math.floor(1000 + Math.random() * 9000);
-    const prefix = reward.category === 'wellness' ? 'TSHACHU' : reward.category === 'transit' ? 'TRANSIT' : 'HARVEST';
+    const prefix = reward.category === 'wellness' ? 'TSHACHU' : reward.category === 'transit' ? 'TRANSIT' : 'GROCERY';
     const newVoucher: RedeemedVoucher = {
       id: `vouch-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       rewardId: reward.id,
@@ -310,13 +524,14 @@ export default function App() {
     };
 
     setRedeemedVouchers(prev => [newVoucher, ...prev]);
+    saveVoucherToFirestore(newVoucher).catch(console.error);
 
     const redeemNotifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     setNotifications(prev => [
       {
         id: redeemNotifId,
-        title: 'Pass Issued',
-        message: `Redeemed ${reward.title}. Voucher ready in Wallet.`,
+        title: 'Pass Issued & Saved',
+        message: `Redeemed ${reward.title}. Stored in your GMC Cloud Wallet.`,
         time: 'Just now',
         read: false
       },
@@ -332,11 +547,18 @@ export default function App() {
       prev.map(r => {
         if (r.id === reportId) {
           const upvoted = !r.userUpvoted;
+          const newUpvotes = upvoted ? r.upvotes + 1 : Math.max(0, r.upvotes - 1);
           if (upvoted) playMindfulChime('bell');
+
+          // Persist to Firestore
+          updateReportInFirestore(reportId, {
+            upvotes: newUpvotes
+          }).catch(console.error);
+
           return {
             ...r,
             userUpvoted: upvoted,
-            upvotes: upvoted ? r.upvotes + 1 : Math.max(0, r.upvotes - 1)
+            upvotes: newUpvotes
           };
         }
         return r;
@@ -354,6 +576,12 @@ export default function App() {
     setReports(prev =>
       prev.map(r => {
         if (r.id === reportId) {
+          // Persist to Firestore
+          updateReportInFirestore(reportId, {
+            status: 'pending_verification' as ReportStatus,
+            resolutionEvidence: evidence
+          }).catch(console.error);
+
           return {
             ...r,
             status: 'pending_verification' as ReportStatus,
@@ -393,19 +621,29 @@ export default function App() {
         if (r.id === reportId) {
           fixerName = r.resolutionEvidence?.fixerName || user.name;
           reportTitle = r.title;
+          const updatedEvidence = r.resolutionEvidence
+            ? {
+                ...r.resolutionEvidence,
+                isVerifiedByHQ: true,
+                verifiedByOfficial: user.name,
+                pointsAwarded: bonusPoints
+              }
+            : undefined;
+
+          // Persist to Firestore
+          updateReportInFirestore(reportId, {
+            status: 'resolved' as ReportStatus,
+            resolvedAt: 'Just now',
+            resolutionNotes: officialNotes || 'Remediation verified & certified by GMC HQ Command.',
+            resolutionEvidence: updatedEvidence
+          }).catch(console.error);
+
           return {
             ...r,
             status: 'resolved' as ReportStatus,
             resolvedAt: 'Just now',
             resolutionNotes: officialNotes || 'Remediation verified & certified by GMC HQ Command.',
-            resolutionEvidence: r.resolutionEvidence
-              ? {
-                  ...r.resolutionEvidence,
-                  isVerifiedByHQ: true,
-                  verifiedByOfficial: user.name,
-                  pointsAwarded: bonusPoints
-                }
-              : undefined
+            resolutionEvidence: updatedEvidence
           };
         }
         return r;
@@ -416,7 +654,7 @@ export default function App() {
     setUser(u => {
       const prevStats = u.stats || {};
       const currentResolved = prevStats.reportsResolved ?? u.reportsResolvedCount ?? 0;
-      return {
+      const updatedUser: UserProfile = {
         ...u,
         spendablePoints: (u.spendablePoints || 0) + bonusPoints,
         totalKarmaPoints: (u.totalKarmaPoints || 0) + bonusPoints,
@@ -426,14 +664,20 @@ export default function App() {
           reportsResolved: currentResolved + 1
         }
       };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
     });
 
-    // Update city telemetry metrics
-    setMetrics(m => ({
-      ...m,
-      activeIncidentsCount: Math.max(0, m.activeIncidentsCount - 1),
-      harmonyScore: Math.min(100, +(m.harmonyScore + 0.4).toFixed(1))
-    }));
+    // Update city telemetry metrics in Firestore
+    setMetrics(m => {
+      const nextMetrics = {
+        ...m,
+        activeIncidentsCount: Math.max(0, m.activeIncidentsCount - 1),
+        harmonyScore: Math.min(100, +(m.harmonyScore + 0.4).toFixed(1))
+      };
+      setDoc(doc(db, 'metrics', 'current'), nextMetrics).catch(console.error);
+      return nextMetrics;
+    });
 
     setNotifications(prev => [
       {
@@ -535,6 +779,14 @@ export default function App() {
     fieldTeamAssigned?: string, 
     notes?: string
   ) => {
+    // Persist to Firestore
+    updateReportInFirestore(reportId, {
+      status: newStatus,
+      fieldTeamAssigned,
+      resolutionNotes: notes,
+      resolvedAt: newStatus === 'resolved' ? 'Just now' : undefined
+    }).catch(console.error);
+
     setReports(prev =>
       prev.map(r => {
         if (r.id === reportId) {
@@ -551,27 +803,39 @@ export default function App() {
     );
 
     if (newStatus === 'resolved') {
-      setMetrics(m => ({
-        ...m,
-        activeIncidentsCount: Math.max(0, m.activeIncidentsCount - 1),
-        harmonyScore: Math.min(100, +(m.harmonyScore + 0.3).toFixed(1))
-      }));
+      setMetrics(m => {
+        const nextM = {
+          ...m,
+          activeIncidentsCount: Math.max(0, m.activeIncidentsCount - 1),
+          harmonyScore: Math.min(100, +(m.harmonyScore + 0.3).toFixed(1))
+        };
+        setDoc(doc(db, 'metrics', 'current'), nextM).catch(console.error);
+        return nextM;
+      });
     }
   };
 
   // Admin modulation of metrics
   const handleUpdateMetrics = (newMetrics: Partial<CityMetrics>) => {
-    setMetrics(prev => ({ ...prev, ...newMetrics }));
+    setMetrics(prev => {
+      const merged = { ...prev, ...newMetrics };
+      setDoc(doc(db, 'metrics', 'current'), merged).catch(console.error);
+      return merged;
+    });
   };
 
   // Official Role Guard elevation
   const handlePromoteToOfficial = () => {
-    setUser(prev => ({
-      ...prev,
-      role: 'official',
-      levelTitle: 'HQ Biosphere Warden & Director',
-      levelNumber: Math.max(prev.levelNumber, 7)
-    }));
+    setUser(prev => {
+      const updatedUser: UserProfile = {
+        ...prev,
+        role: 'official',
+        levelTitle: 'HQ Biosphere Warden & Director',
+        levelNumber: Math.max(prev.levelNumber, 7)
+      };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
+    });
     setNotifications(prev => [
       {
         id: `notif-auth-${Date.now()}`,
@@ -585,11 +849,15 @@ export default function App() {
   };
 
   const handleDemoteToCitizen = () => {
-    setUser(prev => ({
-      ...prev,
-      role: 'citizen',
-      levelTitle: 'Senior Forest Steward'
-    }));
+    setUser(prev => {
+      const updatedUser: UserProfile = {
+        ...prev,
+        role: 'citizen',
+        levelTitle: 'Senior Forest Steward'
+      };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
+    });
   };
 
   // Official mission deployment
@@ -601,6 +869,7 @@ export default function App() {
       currentParticipants: 1
     };
     setMissions(prev => [newMission, ...prev]);
+    setDoc(doc(db, 'missions', newMission.id), newMission).catch(console.error);
     setNotifications(prev => [
       {
         id: `notif-mission-${Date.now()}`,
@@ -629,7 +898,11 @@ export default function App() {
 
   // Profile update handler
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
-    setUser(prev => ({ ...prev, ...updated }));
+    setUser(prev => {
+      const nextUser = { ...prev, ...updated };
+      saveUserToFirestore(nextUser).catch(console.error);
+      return nextUser;
+    });
   };
 
   // Refresh AI City Insight
@@ -718,6 +991,8 @@ export default function App() {
         }}
         onOpenAuthModal={() => handleNavigate('auth')}
         onLogout={handleLogout}
+        onForceSync={handleSyncOfflineData}
+        isSyncing={isSyncing}
       />
 
       {/* Main Viewport Container with mobile bottom safe space for bottom nav */}
@@ -739,6 +1014,7 @@ export default function App() {
             }}
             onNavigateToMap={handleNavigateToMapWithSector}
             onNavigateToMissions={() => handleNavigate('missions')}
+            onNavigateToRankings={() => handleNavigate('rankings')}
             onUpvoteReport={handleUpvoteReport}
             onSelectReport={(report) => setInspectingReport(report)}
             onJoinMission={handleJoinMission}
@@ -805,10 +1081,25 @@ export default function App() {
               setReportInitialSector(undefined);
               setIsReportingModalOpen(true);
             }}
+            onNavigateToRankings={() => handleNavigate('rankings')}
           />
         )}
 
-        {/* 6. Admin Portal (HQ Command) */}
+        {/* 6. Community Leaderboard & Rising Stars Rankings */}
+        {currentView === 'rankings' && (
+          <CommunityRankings
+            currentUser={user}
+            contributors={topContributors}
+            onOpenReportModal={() => {
+              setReportInitialCoords(undefined);
+              setReportInitialSector(undefined);
+              setIsReportingModalOpen(true);
+            }}
+            onNavigateToProfile={() => handleNavigate('profile')}
+          />
+        )}
+
+        {/* 7. Admin Portal (HQ Command) */}
         {currentView === 'admin' && (
           <AdminPortal
             user={user}
@@ -829,7 +1120,7 @@ export default function App() {
           />
         )}
 
-        {/* 7. Dedicated Citizen Authentication Screen */}
+        {/* 8. Dedicated Citizen Authentication Screen */}
         {currentView === 'auth' && (
           <AuthScreen
             currentUser={user}
@@ -855,6 +1146,12 @@ export default function App() {
               className="hover:text-[#1b4332] font-semibold transition"
             >
               City Pulse
+            </button>
+            <button
+              onClick={() => handleNavigate('rankings')}
+              className="hover:text-[#1b4332] font-semibold transition text-emerald-700 font-bold"
+            >
+              🌟 Community Rankings
             </button>
             <button
               onClick={() => handleNavigate('map')}

@@ -1,0 +1,291 @@
+{
+  "entities": {
+    "CitizenReport": {
+      "title": "CitizenReport",
+      "description": "Ecological observation report submitted by citizens across Gelephu Mindfulness City",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the report"
+        },
+        "category": {
+          "type": "string",
+          "description": "Ecological category such as forestry, municipal, agriculture, livestock, wildlife, water, energy, or waste"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Report title"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 3000,
+          "description": "Detailed description of the observation or concern"
+        },
+        "sector": {
+          "type": "string",
+          "maxLength": 150,
+          "description": "Geographical sector in GMC"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "dispatched", "in-progress", "in_progress", "pending_verification", "verified", "resolved"],
+          "description": "Current resolution status"
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Impact severity"
+        },
+        "pointsAwarded": {
+          "type": "number",
+          "description": "Karma points allocated"
+        },
+        "authorId": {
+          "type": "string",
+          "description": "ID of citizen who logged the observation"
+        },
+        "authorName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Display name of the author"
+        },
+        "upvotes": {
+          "type": "number",
+          "description": "Community upvote tally"
+        },
+        "upvoters": {
+          "type": "array",
+          "description": "List of user IDs who upvoted"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Human-readable observation timestamp"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp of creation"
+        }
+      },
+      "required": ["id", "category", "title", "description", "status", "pointsAwarded", "authorId", "authorName"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Collective ecological mission or tree-planting drive in GMC",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Mission identifier"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Mission title"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Mission details and ecological goals"
+        },
+        "targetParticipants": {
+          "type": "number",
+          "description": "Participant capacity or target"
+        },
+        "currentParticipants": {
+          "type": "number",
+          "description": "Current confirmed participants"
+        },
+        "rewardPoints": {
+          "type": "number",
+          "description": "Karma points awarded upon completion"
+        },
+        "participants": {
+          "type": "array",
+          "description": "List of participant citizen user IDs"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "completed", "upcoming"],
+          "description": "Mission operational state"
+        }
+      },
+      "required": ["id", "title", "description", "rewardPoints", "currentParticipants"]
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Redeemed eco-stewardship voucher or pass",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Voucher pass code ID"
+        },
+        "rewardId": {
+          "type": "string",
+          "description": "Referenced reward item ID"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "Title of the reward voucher"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Secure voucher redemption code"
+        },
+        "pointsPaid": {
+          "type": "number",
+          "description": "Karma points spent"
+        },
+        "redeemedAt": {
+          "type": "string",
+          "description": "Timestamp when voucher was redeemed"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "used", "expired"],
+          "description": "Voucher validity status"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User ID of the voucher holder"
+        }
+      },
+      "required": ["id", "rewardId", "title", "code", "pointsPaid", "status", "userId"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Citizen eco-steward profile and karma metrics",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "User ID"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Citizen name"
+        },
+        "email": {
+          "type": "string",
+          "description": "Citizen contact email"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["citizen", "steward", "admin"],
+          "description": "User role in the system"
+        },
+        "totalKarmaPoints": {
+          "type": "number",
+          "description": "All-time accumulated Karma score"
+        },
+        "spendablePoints": {
+          "type": "number",
+          "description": "Current spendable Karma balance"
+        },
+        "totalReportsCount": {
+          "type": "number",
+          "description": "Total ecological reports submitted"
+        },
+        "reportsResolvedCount": {
+          "type": "number",
+          "description": "Total reports resolved or verified"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Profile picture URL"
+        },
+        "avatarEmoji": {
+          "type": "string",
+          "maxLength": 10,
+          "description": "Bhutanese symbol or emoji"
+        },
+        "levelTitle": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Stewardship honorific title"
+        },
+        "levelNumber": {
+          "type": "number",
+          "description": "Numerical steward tier"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last profile update timestamp"
+        }
+      },
+      "required": ["id", "name", "role", "totalKarmaPoints", "spendablePoints"]
+    },
+    "CityTelemetry": {
+      "title": "CityTelemetry",
+      "description": "Real-time biosensor telemetry metrics for Gelephu Mindfulness City",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Telemetry snapshot ID"
+        },
+        "aqi": {
+          "type": "number",
+          "description": "Air Quality Index"
+        },
+        "cleanEnergyPercent": {
+          "type": "number",
+          "description": "Clean energy grid mix percentage"
+        },
+        "biodiversityIndex": {
+          "type": "number",
+          "description": "Ecological corridor biodiversity index"
+        },
+        "watershedPurity": {
+          "type": "number",
+          "description": "Mao River watershed purity percentage"
+        },
+        "uvIndex": {
+          "type": "number",
+          "description": "Ultraviolet solar index"
+        },
+        "radiationUsv": {
+          "type": "number",
+          "description": "Ambient background radiation in microSieverts per hour"
+        },
+        "weather": {
+          "type": "object",
+          "description": "Atmospheric conditions and status"
+        },
+        "lastUpdated": {
+          "type": "string",
+          "description": "ISO timestamp of sensor aggregation"
+        }
+      },
+      "required": ["id", "aqi", "cleanEnergyPercent", "biodiversityIndex", "watershedPurity", "uvIndex", "radiationUsv"]
+    }
+  },
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "CitizenReport",
+      "description": "Ecological observations and issues across GMC sectors"
+    },
+    "/missions/{missionId}": {
+      "schema": "Mission",
+      "description": "Community eco-missions, plantings, and cleanups"
+    },
+    "/vouchers/{voucherId}": {
+      "schema": "Voucher",
+      "description": "Vouchers redeemed by citizens for grocery discounts and transit passes"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Citizen steward profiles and karma points"
+    },
+    "/metrics/{metricId}": {
+      "schema": "CityTelemetry",
+      "description": "GMC Biosphere vital signs, UV index, radiation, and weather"
+    }
+  }
+}

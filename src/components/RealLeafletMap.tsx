@@ -283,6 +283,10 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
       const dist = calculateDistanceKm(userLocation.coords, report.coordinates);
       const categoryColors: Record<string, { bg: string; border: string; emoji: string }> = {
         wildlife: { bg: '#52b788', border: '#1b4332', emoji: '🐾' },
+        forestry: { bg: '#2d6a4f', border: '#1b4332', emoji: '🌲' },
+        municipal: { bg: '#3b82f6', border: '#1d4ed8', emoji: '🏛️' },
+        agriculture: { bg: '#eab308', border: '#a16207', emoji: '🌾' },
+        livestock: { bg: '#d97706', border: '#92400e', emoji: '🐂' },
         watershed: { bg: '#0ea5e9', border: '#0369a1', emoji: '💧' },
         waste: { bg: '#f59e0b', border: '#b45309', emoji: '♻️' },
         hazard: { bg: '#ef4444', border: '#991b1b', emoji: '⚠️' },
