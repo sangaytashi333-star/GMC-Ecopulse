@@ -24,7 +24,9 @@ import {
   ExternalLink,
   ShieldCheck,
   Globe,
-  Radio
+  Radio,
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 import { CitizenReport, Mission, Coordinates, LiveLocationState } from '../types';
 import { calculateDistanceKm, formatDistance, formatCoordinates } from '../utils/geo';
@@ -92,6 +94,16 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
     distanceText: string;
   } | null>(null);
   const [droppedPin, setDroppedPin] = useState<Coordinates | null>(null);
+
+  // Keep selectedEntity mission synced with live missions state
+  useEffect(() => {
+    if (selectedEntity?.type === 'mission' && selectedEntity.data?.id) {
+      const updated = missions.find(m => m.id === selectedEntity.data.id);
+      if (updated && (updated.joined !== selectedEntity.data.joined || updated.currentParticipants !== selectedEntity.data.currentParticipants)) {
+        setSelectedEntity(prev => (prev ? { ...prev, data: updated } : null));
+      }
+    }
+  }, [missions, selectedEntity?.type, selectedEntity?.data?.id]);
 
   // Map Tile Providers (High Performance & Ultra Reliable Satellite, Street, and Topo)
   const TILE_SERVERS: Record<MapTileStyle, { url: string; attribution: string; maxZoom: number; subdomains?: string }> = {
@@ -428,29 +440,29 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
       {/* Real-time Map Canvas Container */}
       <div 
         ref={mapContainerRef} 
-        className={`w-full z-0 focus:outline-none min-h-[460px] ${
-          isFullscreen ? 'h-screen' : 'h-[460px] sm:h-[540px] md:h-[620px]'
+        className={`w-full z-0 focus:outline-none min-h-[360px] sm:min-h-[460px] ${
+          isFullscreen ? 'h-screen' : 'h-[380px] sm:h-[480px] md:h-[580px] lg:h-[640px]'
         }`}
-        style={{ touchAction: 'pan-x pan-y', minHeight: '460px', width: '100%' }}
+        style={{ touchAction: 'pan-x pan-y', width: '100%' }}
       />
 
       {/* Top HUD: Real-Time GPS Telemetry Strip */}
-      <div className="absolute top-3 sm:top-4 left-3 sm:left-4 right-3 sm:right-auto z-20 flex flex-wrap items-center gap-2 pointer-events-none">
+      <div className="absolute top-3 sm:top-4 left-3 sm:left-4 max-w-[calc(100%-60px)] sm:max-w-none z-20 flex flex-wrap items-center gap-2 pointer-events-none">
         
         {/* Live GPS Coordinates Pill */}
-        <div className="pointer-events-auto bg-[#1b4332]/95 backdrop-blur-md px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl border border-[#52b788]/40 text-white shadow-lg flex items-center space-x-2.5 sm:space-x-3">
+        <div className="pointer-events-auto bg-[#1b4332]/95 backdrop-blur-md px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl border border-[#52b788]/40 text-white shadow-lg flex items-center space-x-2 sm:space-x-3">
           <div className="relative flex items-center justify-center shrink-0">
             <span className="w-2.5 h-2.5 rounded-full bg-[#52b788]" />
             <span className="absolute w-4 h-4 rounded-full bg-[#52b788]/40 animate-ping" />
           </div>
           <div>
-            <div className="flex items-center space-x-1.5 text-[10px] sm:text-[11px] font-extrabold text-[#d8f3dc]">
+            <div className="flex items-center space-x-1.5 text-[9px] sm:text-[11px] font-extrabold text-[#d8f3dc]">
               <span>LIVE GIS TELEMETRY</span>
               <span className="text-[8px] sm:text-[9px] px-1.5 py-0.2 rounded bg-[#52b788] text-[#081c15] font-black">
                 {userLocation.mode === 'real' ? 'DEVICE GPS' : 'GMC SIMULATOR'}
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs font-mono font-bold text-white">
+            <p className="text-[10px] sm:text-xs font-mono font-bold text-white truncate max-w-[170px] sm:max-w-none">
               {formatCoordinates(userLocation.coords)}
             </p>
           </div>
@@ -472,23 +484,23 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
       </div>
 
       {/* Right Controls: Recenter, Layers, Wheel Zoom Lock, Fullscreen */}
-      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex flex-col space-y-2">
+      <div className="absolute top-3 sm:top-4 right-3 sm:right-4 z-20 flex flex-col space-y-1.5 sm:space-y-2">
         
         {/* Recenter / Locate Me Button */}
         <button
           type="button"
           onClick={handleRecenter}
-          className="p-2.5 sm:p-3 rounded-2xl bg-[#1b4332] hover:bg-[#2d6a4f] text-white border border-[#52b788]/40 shadow-xl transition-all flex items-center justify-center group active:scale-95"
+          className="p-2 sm:p-2.5 rounded-2xl bg-[#1b4332] hover:bg-[#2d6a4f] text-white border border-[#52b788]/40 shadow-xl transition-all flex items-center justify-center group active:scale-95 min-h-[40px] min-w-[40px]"
           title="Recenter to Live GPS"
         >
           <Crosshair className="w-4 h-4 sm:w-5 sm:h-5 text-[#52b788] group-hover:rotate-90 transition-transform duration-300" />
         </button>
 
-        {/* Wheel Zoom Safe Lock Toggle (Lets user easily scroll page vs zoom map) */}
+        {/* Wheel Zoom Safe Lock Toggle */}
         <button
           type="button"
           onClick={() => setAllowWheelZoom(!allowWheelZoom)}
-          className={`p-2.5 sm:p-3 rounded-2xl border shadow-xl transition-all flex items-center justify-center group active:scale-95 ${
+          className={`p-2 sm:p-2.5 rounded-2xl border shadow-xl transition-all flex items-center justify-center group active:scale-95 min-h-[40px] min-w-[40px] ${
             allowWheelZoom
               ? 'bg-[#52b788] text-[#081c15] border-[#52b788]'
               : 'bg-[#1b4332]/95 hover:bg-[#2d6a4f] text-[#d8f3dc] border-[#52b788]/30'
@@ -502,55 +514,63 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
         <button
           type="button"
           onClick={toggleFullscreen}
-          className="p-2.5 sm:p-3 rounded-2xl bg-[#1b4332]/95 hover:bg-[#2d6a4f] text-white border border-[#52b788]/30 shadow-xl transition-all flex items-center justify-center active:scale-95"
+          className="p-2 sm:p-2.5 rounded-2xl bg-[#1b4332]/95 hover:bg-[#2d6a4f] text-white border border-[#52b788]/30 shadow-xl transition-all flex items-center justify-center active:scale-95 min-h-[40px] min-w-[40px]"
           title={isFullscreen ? "Exit Fullscreen" : "Immersive Fullscreen"}
         >
           {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
         </button>
 
-        {/* Map Layer Switcher */}
-        <div className="bg-[#1b4332]/95 backdrop-blur-md p-1.5 rounded-2xl border border-[#52b788]/30 shadow-xl flex flex-col space-y-1">
+        {/* Map Layer Switcher: Compact Icons on mobile, Full Pills on Tablet & Desktop */}
+        <div className="bg-[#1b4332]/95 backdrop-blur-md p-1 sm:p-1.5 rounded-2xl border border-[#52b788]/30 shadow-xl flex flex-col space-y-1">
           <button
             type="button"
             onClick={() => handleSetMapStyle('satellite')}
-            className={`px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center space-x-1.5 ${
+            className={`px-2 sm:px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center justify-center sm:justify-start space-x-1 sm:space-x-1.5 min-h-[34px] ${
               mapStyle === 'satellite' ? 'bg-[#52b788] text-[#081c15]' : 'text-gray-300 hover:text-white'
             }`}
+            title="Satellite Aerial Imagery"
           >
-            <span>🛰️ Satellite (Aerial)</span>
+            <span className="text-xs">🛰️</span>
+            <span className="hidden sm:inline">Satellite (Aerial)</span>
           </button>
           <button
             type="button"
             onClick={() => handleSetMapStyle('street')}
-            className={`px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center space-x-1.5 ${
+            className={`px-2 sm:px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center justify-center sm:justify-start space-x-1 sm:space-x-1.5 min-h-[34px] ${
               mapStyle === 'street' ? 'bg-[#52b788] text-[#081c15]' : 'text-gray-300 hover:text-white'
             }`}
+            title="Standard Street (OSM)"
           >
-            <span>🗺️ Street (OSM)</span>
+            <span className="text-xs">🗺️</span>
+            <span className="hidden sm:inline">Street (OSM)</span>
           </button>
           <button
             type="button"
             onClick={() => handleSetMapStyle('voyager')}
-            className={`px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center space-x-1.5 ${
+            className={`px-2 sm:px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center justify-center sm:justify-start space-x-1 sm:space-x-1.5 min-h-[34px] ${
               mapStyle === 'voyager' ? 'bg-[#52b788] text-[#081c15]' : 'text-gray-300 hover:text-white'
             }`}
+            title="Mindful GIS Terrain"
           >
-            <span>🌿 Mindful GIS</span>
+            <span className="text-xs">🌿</span>
+            <span className="hidden sm:inline">Mindful GIS</span>
           </button>
           <button
             type="button"
             onClick={() => handleSetMapStyle('topo')}
-            className={`px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center space-x-1.5 ${
+            className={`px-2 sm:px-2.5 py-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold text-left transition flex items-center justify-center sm:justify-start space-x-1 sm:space-x-1.5 min-h-[34px] ${
               mapStyle === 'topo' ? 'bg-[#52b788] text-[#081c15]' : 'text-gray-300 hover:text-white'
             }`}
+            title="Topography Elevation"
           >
-            <span>⛰️ Topography</span>
+            <span className="text-xs">⛰️</span>
+            <span className="hidden sm:inline">Topography</span>
           </button>
         </div>
       </div>
 
       {/* Bottom Floating Sector Quick-Jump / Simulation Hub */}
-      <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 right-3 sm:right-4 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div className="absolute bottom-2.5 sm:bottom-4 left-2.5 sm:left-4 right-2.5 sm:right-4 z-20 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         
         {/* Gelephu Sector Teleport Pills */}
         <div className="pointer-events-auto flex items-center space-x-1.5 overflow-x-auto max-w-full pb-1 scrollbar-none bg-[#081c15]/90 backdrop-blur-md p-1.5 rounded-2xl border border-[#2d6a4f]/50">
@@ -567,7 +587,7 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
                   mapInstanceRef.current.flyTo([s.coordinates.lat, s.coordinates.lng], 15, { duration: 1.0 });
                 }
               }}
-              className="px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-semibold bg-[#1b4332]/80 hover:bg-[#2d6a4f] text-[#d8f3dc] whitespace-nowrap transition border border-[#52b788]/20 shrink-0"
+              className="px-2.5 py-1 rounded-xl text-[10px] sm:text-[11px] font-semibold bg-[#1b4332]/80 hover:bg-[#2d6a4f] text-[#d8f3dc] whitespace-nowrap transition border border-[#52b788]/20 shrink-0 min-h-[32px] flex items-center"
             >
               {s.name.split(':')[0]}
             </button>
@@ -578,16 +598,16 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
         <button
           type="button"
           onClick={onToggleTracking}
-          className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-extrabold text-[11px] sm:text-xs shadow-lg transition flex items-center space-x-1.5 shrink-0"
+          className="pointer-events-auto px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-extrabold text-[11px] sm:text-xs shadow-lg transition flex items-center space-x-1.5 shrink-0 min-h-[36px]"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>{userLocation.mode === 'real' ? 'Simulate Gelephu Walk' : 'Use My Device GPS'}</span>
         </button>
       </div>
 
-      {/* Entity Details Floating Popup (when marker or pin is clicked) */}
+      {/* Entity Details Floating Popup (when marker or pin is clicked) - Adapts as bottom sheet on mobile */}
       {selectedEntity && (
-        <div className="absolute top-16 sm:top-20 left-3 sm:left-4 right-3 sm:right-auto sm:w-96 z-30 bg-white rounded-3xl p-4 sm:p-5 shadow-2xl border border-gray-200 animate-in fade-in slide-in-from-bottom-3 max-h-[80vh] overflow-y-auto">
+        <div className="absolute bottom-14 sm:bottom-auto sm:top-20 left-2.5 sm:left-4 right-2.5 sm:right-auto sm:w-96 z-30 bg-white rounded-3xl p-4 sm:p-5 shadow-2xl border border-gray-200 animate-in fade-in slide-in-from-bottom-3 max-h-[65vh] sm:max-h-[80vh] overflow-y-auto">
           <div className="flex items-start justify-between pb-3 border-b border-gray-100">
             <div className="flex items-center space-x-2">
               <span className="px-2.5 py-0.5 text-[10px] font-extrabold uppercase rounded-full bg-[#d8f3dc] text-[#1b4332]">
@@ -597,7 +617,7 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
             </div>
             <button
               onClick={() => setSelectedEntity(null)}
-              className="text-gray-400 hover:text-gray-600 p-1"
+              className="text-gray-400 hover:text-gray-600 p-1 min-h-[32px] min-w-[32px] flex items-center justify-center"
             >
               ✕
             </button>
@@ -674,14 +694,50 @@ export const RealLeafletMap: React.FC<RealLeafletMapProps> = ({
                 </div>
               </div>
 
+              <div className="flex items-center justify-between text-xs pt-0.5">
+                <span className="text-gray-500 font-medium">
+                  {selectedEntity.data.currentParticipants}/{selectedEntity.data.targetParticipants} Stewards joined
+                </span>
+                {selectedEntity.data.joined && (
+                  <span className="inline-flex items-center text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+                    Enrolled
+                  </span>
+                )}
+              </div>
+
               <button
                 onClick={() => {
                   onJoinMission(selectedEntity.data.id);
-                  setSelectedEntity(null);
+                  const isNowJoined = !selectedEntity.data.joined;
+                  setSelectedEntity({
+                    ...selectedEntity,
+                    data: {
+                      ...selectedEntity.data,
+                      joined: isNowJoined,
+                      currentParticipants: isNowJoined
+                        ? selectedEntity.data.currentParticipants + 1
+                        : Math.max(0, selectedEntity.data.currentParticipants - 1)
+                    }
+                  });
                 }}
-                className="w-full py-2.5 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] text-xs font-extrabold transition shadow-md"
+                className={`w-full py-2.5 rounded-xl text-xs font-extrabold transition shadow-md flex items-center justify-center space-x-2 ${
+                  selectedEntity.data.joined
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                    : 'bg-[#52b788] hover:bg-[#74c69d] text-[#081c15]'
+                }`}
               >
-                {selectedEntity.data.joined ? '✓ Joined & Confirmed' : 'Join Citizen Mission'}
+                {selectedEntity.data.joined ? (
+                  <>
+                    <LogOut className="w-4 h-4" />
+                    <span>Leave Mission</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>Join Citizen Mission (+{selectedEntity.data.rewardPoints} Karma)</span>
+                  </>
+                )}
               </button>
             </div>
           )}

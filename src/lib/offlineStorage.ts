@@ -80,6 +80,37 @@ export function getCachedMissions(): Mission[] {
   return INITIAL_MISSIONS;
 }
 
+const USER_JOINED_MISSIONS_KEY_PREFIX = 'gmc_user_joined_missions_';
+
+/**
+ * Get IDs of missions joined by a specific user from localStorage
+ */
+export function getLocalJoinedMissionIds(userEmail: string): string[] {
+  try {
+    const key = `${USER_JOINED_MISSIONS_KEY_PREFIX}${(userEmail || 'default').toLowerCase().trim()}`;
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (err) {
+    console.warn('Error reading joined missions from storage:', err);
+  }
+  return ['mis-001']; // Initial default
+}
+
+/**
+ * Persist IDs of missions joined by a specific user to localStorage
+ */
+export function saveLocalJoinedMissionIds(userEmail: string, missionIds: string[]): void {
+  try {
+    const key = `${USER_JOINED_MISSIONS_KEY_PREFIX}${(userEmail || 'default').toLowerCase().trim()}`;
+    localStorage.setItem(key, JSON.stringify(missionIds));
+  } catch (err) {
+    console.warn('Error saving joined missions to storage:', err);
+  }
+}
+
 /**
  * Get human-readable time since last data sync
  */

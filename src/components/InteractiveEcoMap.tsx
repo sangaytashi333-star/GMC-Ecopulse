@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Compass, 
@@ -21,7 +21,9 @@ import {
   Navigation,
   Globe,
   Radio,
-  Map as MapIcon
+  Map as MapIcon,
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 import { CitizenReport, Mission, Coordinates, LiveLocationState } from '../types';
 import { GMC_SECTORS } from '../data/initialData';
@@ -71,6 +73,16 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
   const [includeResolved, setIncludeResolved] = useState(false);
   const [selectedEntity, setSelectedEntity] = useState<{ type: 'report' | 'mission' | 'sensor' | 'wildlife'; data: any } | null>(null);
 
+  // Keep selectedEntity mission synced with live missions state
+  useEffect(() => {
+    if (selectedEntity?.type === 'mission' && selectedEntity.data?.id) {
+      const updated = missions.find(m => m.id === selectedEntity.data.id);
+      if (updated && (updated.joined !== selectedEntity.data.joined || updated.currentParticipants !== selectedEntity.data.currentParticipants)) {
+        setSelectedEntity(prev => (prev ? { ...prev, data: updated } : null));
+      }
+    }
+  }, [missions, selectedEntity?.type, selectedEntity?.data?.id]);
+
   // Calculate distance for all reports and sort nearest
   const reportsWithDistance = reports.map(r => ({
     ...r,
@@ -119,71 +131,71 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
     <div className="space-y-6 animate-in fade-in duration-500">
       
       {/* Header & Controls Strip */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-gray-200/80 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-5 rounded-2xl border border-gray-200/80 shadow-xs">
         <div>
           <div className="flex items-center space-x-2">
-            <h2 className="text-xl font-extrabold text-[#1b4332] tracking-tight">GMC Living Eco-Atlas & Real-Time GIS</h2>
-            <span className="px-2 py-0.5 text-[10px] font-bold bg-[#d8f3dc] text-[#1b4332] rounded-full flex items-center space-x-1">
+            <h2 className="text-lg sm:text-xl font-extrabold text-[#1b4332] tracking-tight">GMC Living Eco-Atlas & Real-Time GIS</h2>
+            <span className="px-2 py-0.5 text-[10px] font-bold bg-[#d8f3dc] text-[#1b4332] rounded-full flex items-center space-x-1 shrink-0">
               <Radio className="w-3 h-3 text-[#2d6a4f] animate-pulse" />
               <span>Live GPS Active</span>
             </span>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">
             Real-time geocoordinate tracking: <span className="font-mono font-bold text-[#1b4332]">{formatCoordinates(userLocation.coords)}</span> (±{userLocation.accuracy}m)
           </p>
         </div>
 
         {/* View engine switcher & Action buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setIncludeResolved(!includeResolved)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center space-x-1.5 ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center space-x-1.5 min-h-[38px] ${
               includeResolved 
                 ? 'bg-[#1b4332] text-white border-[#1b4332]' 
                 : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100'
             }`}
           >
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{includeResolved ? 'Showing All (Inc. Resolved)' : 'Active Incidents Only'}</span>
+            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">{includeResolved ? 'Showing All' : 'Active Only'}</span>
           </button>
 
           <div className="bg-[#f8f9f6] p-1 rounded-xl border border-gray-200 flex items-center space-x-1 text-xs">
             <button
               onClick={() => setMapEngine('real')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 min-h-[34px] ${
                 mapEngine === 'real' ? 'bg-[#1b4332] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Globe className="w-3.5 h-3.5" />
-              <span>Real Tile Map (GPS)</span>
+              <Globe className="w-3.5 h-3.5 shrink-0" />
+              <span>Real Tile Map</span>
             </button>
             <button
               onClick={() => setMapEngine('schematic')}
-              className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-bold transition flex items-center space-x-1.5 min-h-[34px] ${
                 mapEngine === 'schematic' ? 'bg-[#1b4332] text-white shadow-xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Compass className="w-3.5 h-3.5" />
-              <span>GMC Schematic</span>
+              <Compass className="w-3.5 h-3.5 shrink-0" />
+              <span>Schematic</span>
             </button>
           </div>
 
           <button
             onClick={onOpenReportModal}
-            className="px-3.5 py-2 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-bold text-xs shadow-xs flex items-center space-x-1.5 transition"
+            className="px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] font-bold text-xs shadow-xs flex items-center space-x-1.5 transition min-h-[38px]"
           >
-            <PlusCircle className="w-4 h-4" />
-            <span>Report at My GPS</span>
+            <PlusCircle className="w-4 h-4 shrink-0" />
+            <span>Report at GPS</span>
           </button>
         </div>
       </div>
 
-      {/* Map Style Quick Switcher Bar for Real Tile Map */}
+      {/* Map Style Quick Switcher Bar for Real Tile Map (with mobile horizontal scroll) */}
       {mapEngine === 'real' && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#f8f9f6] p-3 rounded-2xl border border-gray-200">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-extrabold text-[#1b4332] flex items-center mr-1">
-              <MapIcon className="w-3.5 h-3.5 mr-1.5 text-[#2d6a4f]" /> Base Tile Layer:
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-[#f8f9f6] p-2.5 sm:p-3 rounded-2xl border border-gray-200">
+          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0">
+            <span className="text-xs font-extrabold text-[#1b4332] flex items-center mr-1 shrink-0">
+              <MapIcon className="w-3.5 h-3.5 mr-1.5 text-[#2d6a4f]" /> Tiles:
             </span>
             <button
               type="button"
@@ -191,13 +203,13 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
                 setMapTileStyle('satellite');
                 playMindfulChime('bell');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs whitespace-nowrap shrink-0 min-h-[36px] ${
                 mapTileStyle === 'satellite'
                   ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
                   : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
               }`}
             >
-              <span>🛰️ Satellite Imagery (Aerial)</span>
+              <span>🛰️ Satellite Imagery</span>
             </button>
             <button
               type="button"
@@ -205,13 +217,13 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
                 setMapTileStyle('street');
                 playMindfulChime('bell');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs whitespace-nowrap shrink-0 min-h-[36px] ${
                 mapTileStyle === 'street'
                   ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
                   : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
               }`}
             >
-              <span>🗺️ Standard Street (OpenStreetMap)</span>
+              <span>🗺️ Street (OSM)</span>
             </button>
             <button
               type="button"
@@ -219,7 +231,7 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
                 setMapTileStyle('voyager');
                 playMindfulChime('bell');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs whitespace-nowrap shrink-0 min-h-[36px] ${
                 mapTileStyle === 'voyager'
                   ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
                   : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
@@ -233,18 +245,18 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
                 setMapTileStyle('topo');
                 playMindfulChime('bell');
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs whitespace-nowrap shrink-0 min-h-[36px] ${
                 mapTileStyle === 'topo'
                   ? 'bg-[#1b4332] text-white ring-2 ring-[#52b788]'
                   : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-100'
               }`}
             >
-              <span>⛰️ Topographic Elevation</span>
+              <span>⛰️ Topo</span>
             </button>
           </div>
 
-          <div className="text-[11px] text-gray-500 font-medium">
-            {mapTileStyle === 'satellite' ? 'Displaying high-detail satellite view of Gelephu valley' : mapTileStyle === 'street' ? 'Displaying OSM street grid & named roads' : 'Custom GIS terrain layer active'}
+          <div className="text-[11px] text-gray-500 font-medium hidden md:block">
+            {mapTileStyle === 'satellite' ? 'Displaying satellite view' : mapTileStyle === 'street' ? 'Displaying OSM street grid' : 'Custom GIS terrain active'}
           </div>
         </div>
       )}
@@ -369,7 +381,7 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
         {/* SVG Vector Map Rendering */}
         <svg
           viewBox={`0 0 ${mapWidth} ${mapHeight}`}
-          className="w-full h-[460px] sm:h-[540px] select-none"
+          className="w-full h-[340px] sm:h-[460px] md:h-[540px] select-none"
         >
           <defs>
             {/* Soft gradients for landscape */}
@@ -635,13 +647,23 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
                         }
                       });
                     }}
-                    className={`px-4 py-2 rounded-xl font-bold text-xs shadow-xs transition ${
+                    className={`px-3.5 py-2 rounded-xl font-bold text-xs shadow-xs transition flex items-center space-x-1.5 ${
                       selectedEntity.data.joined
-                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
                         : 'bg-[#52b788] hover:bg-[#74c69d] text-[#081c15]'
                     }`}
                   >
-                    {selectedEntity.data.joined ? 'Leave Mission' : 'Join Mission'}
+                    {selectedEntity.data.joined ? (
+                      <>
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Leave Mission</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Join Mission</span>
+                      </>
+                    )}
                   </button>
                 </div>
               )}

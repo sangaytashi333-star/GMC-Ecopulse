@@ -71,6 +71,7 @@ export const INITIAL_USER_PROFILE: UserProfile = {
   preferredSector: "Sector 3: Phibsoo Wildlife Buffer & Elephant Highway",
   bio: "Committed to preserving Bhutan's high-biodiversity riparian zones and mindful permaculture terraces in GMC.",
   pinnedBadgeId: "badge-forest-guardian",
+  joinedMissionIds: ["mis-001"],
   badges: [
     {
       id: "badge-karma-guardian",
@@ -510,7 +511,8 @@ export const INITIAL_MISSIONS: Mission[] = [
     organizer: "GMC River Conservancy & Ecological Council",
     requiredSkills: ["Gentle Digging", "Mindful Teamwork", "Watering"],
     impactEstimate: "+0.8% Riparian Soil Retention & 1.2 tons CO2 offset/yr",
-    joined: true
+    joined: true,
+    participantEmails: ["sangaytashi.333@gmail.com"]
   },
   {
     id: "mis-002",
@@ -530,7 +532,8 @@ export const INITIAL_MISSIONS: Mission[] = [
     organizer: "Himalayan Biodiversity Research Institute",
     requiredSkills: ["Wildlife Observation", "Gentle Pace", "Quiet Demeanor"],
     impactEstimate: "Calibrates real-time wildlife passage across 4.2 km corridor",
-    joined: false
+    joined: false,
+    participantEmails: []
   },
   {
     id: "mis-003",
@@ -550,7 +553,8 @@ export const INITIAL_MISSIONS: Mission[] = [
     organizer: "GMC Watershed Youth Circle",
     requiredSkills: ["Light Physical Work", "Rubber Boots provided"],
     impactEstimate: "Maintains 99.4% water flow aeration for Mahseer fish",
-    joined: false
+    joined: false,
+    participantEmails: []
   },
   {
     id: "mis-004",
@@ -570,7 +574,8 @@ export const INITIAL_MISSIONS: Mission[] = [
     organizer: "GMC Permaculture Guild",
     requiredSkills: ["Flower Planting", "Composting"],
     impactEstimate: "Provides habitat for 14 native wild bee species",
-    joined: false
+    joined: false,
+    participantEmails: []
   }
 ];
 

@@ -62,6 +62,8 @@ export interface ResolutionEvidence {
   verifiedAt?: string;
   isApproved?: boolean;
   isVerifiedByHQ?: boolean;
+  karmaAwarded?: boolean;
+  karmaAwardedTo?: string;
 }
 
 export interface CitizenReport {
@@ -79,6 +81,7 @@ export interface CitizenReport {
   timestamp: string;
   createdAt?: string;
   reporterName: string;
+  reporterEmail?: string;
   isAnonymous?: boolean;
   pointsAwarded: number;
   aiAnalysis?: AIAnalysisResult;
@@ -89,6 +92,10 @@ export interface CitizenReport {
   userUpvoted?: boolean;
   resolutionEvidence?: ResolutionEvidence;
   cleanupKarmaBonus?: number;
+  karmaAwarded?: boolean;
+  karmaAwardedAmount?: number;
+  karmaAwardedTo?: string;
+  karmaAwardedAt?: string;
 }
 
 export interface Mission {
@@ -110,6 +117,8 @@ export interface Mission {
   requiredSkills: string[];
   impactEstimate: string;
   joined: boolean;
+  participantEmails?: string[];
+  participantIds?: string[];
   proposedBy?: string;
   proposedByEmail?: string;
   proposalDate?: string;
@@ -199,6 +208,7 @@ export interface UserProfile {
   avatarEmoji?: string;
   avatarUrl?: string; // Custom uploaded profile photo (data URL / image URL)
   pinnedBadgeId?: string; // Pinned medal displayed with badge ribbon
+  joinedMissionIds?: string[]; // IDs of missions currently joined by user
   phone?: string;
 }
 

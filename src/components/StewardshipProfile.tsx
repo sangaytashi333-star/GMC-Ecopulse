@@ -64,6 +64,7 @@ export const StewardshipProfile: React.FC<StewardshipProfileProps> = ({
   const [activeCategoryFilter, setActiveCategoryFilter] = useState<BadgeCategory>('all');
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [customPhotoPreview, setCustomPhotoPreview] = useState<string | null>(user.avatarUrl || null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modalFileInputRef = useRef<HTMLInputElement>(null);
@@ -130,16 +131,17 @@ export const StewardshipProfile: React.FC<StewardshipProfileProps> = ({
     confetti({ particleCount: 30, spread: 40, origin: { y: 0.8 } });
   };
 
-  // Image upload handling
+  // Image upload handling without window.alert
   const handleFileSelected = (file: File) => {
+    setUploadError(null);
     if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file (PNG, JPG, WebP).');
+      setUploadError('Please upload a valid image file (PNG, JPG, WebP).');
       return;
     }
 
     // Limit size to ~5MB
     if (file.size > 5 * 1024 * 1024) {
-      alert('Image file is too large. Please select an image under 5MB.');
+      setUploadError('Image file is too large. Please select an image under 5MB.');
       return;
     }
 
@@ -455,6 +457,12 @@ export const StewardshipProfile: React.FC<StewardshipProfileProps> = ({
               </div>
               <span className="text-xs text-gray-500 font-medium">Active Profile Image</span>
             </div>
+
+            {uploadError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 font-semibold text-center animate-in fade-in">
+                {uploadError}
+              </div>
+            )}
 
             {/* Drag & Drop Upload Zone */}
             <div

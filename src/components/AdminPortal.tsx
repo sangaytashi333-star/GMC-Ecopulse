@@ -85,8 +85,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // Active HQ Section Tab
   const [activeTab, setActiveTab] = useState<'triage' | 'missions' | 'telemetry' | 'broadcast' | 'rangers'>('triage');
 
-  // Incident Triage State
-  const [selectedStatusTab, setSelectedStatusTab] = useState<'all' | 'pending' | 'pending_verification' | 'dispatched' | 'in-progress' | 'resolved'>('all');
+  // Incident Triage State (defaults to action_needed so managed/resolved items disappear)
+  const [selectedStatusTab, setSelectedStatusTab] = useState<'action_needed' | 'dispatched' | 'in-progress' | 'resolved' | 'all'>('action_needed');
   const [selectedReport, setSelectedReport] = useState<CitizenReport | null>(null);
   const [assigningTeam, setAssigningTeam] = useState<string>(fieldTeams[0]?.name || 'Riparian Hydrology Unit');
   const [resolutionNotes, setResolutionNotes] = useState('');
@@ -149,6 +149,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Dispatch team
   const handleDispatchTeam = (report: CitizenReport) => {
+    if (report.status === 'dispatched' || report.status === 'resolved') {
+      setSelectedReport(null);
+      return;
+    }
     onUpdateReportStatus(report.id, 'dispatched', assigningTeam, `Dispatched ${assigningTeam} to coordinates.`);
     playMindfulChime('karma');
     setSelectedReport(null);
@@ -156,6 +160,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Resolve incident
   const handleResolveIncident = (report: CitizenReport) => {
+    if (report.status === 'resolved') {
+      setSelectedReport(null);
+      return;
+    }
     onUpdateReportStatus(
       report.id, 
       'resolved', 
@@ -169,6 +177,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Approve Citizen Fix Resolution Evidence
   const handleApproveFixEvidence = (report: CitizenReport) => {
+    if (report.status === 'resolved' || report.karmaAwarded) {
+      setSelectedReport(null);
+      return;
+    }
     const points = awardPointsInput || report.resolutionEvidence?.pointsAwarded || 200;
     const notes = resolutionNotes || 'Clean-up verified and certified by GMC Command. Site remediation approved.';
     
@@ -185,6 +197,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Reject / Request More Evidence for Citizen Fix
   const handleRejectFixEvidence = (report: CitizenReport) => {
+    if (report.status === 'resolved' || report.karmaAwarded) {
+      setSelectedReport(null);
+      return;
+    }
     const notes = resolutionNotes || 'Evidence does not sufficiently verify full site remediation. Additional photos requested.';
     
     if (onRejectResolution) {
@@ -294,9 +310,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     setTimeout(() => setNoticeBroadcasted(false), 4000);
   };
 
-  // Filtered reports for Triage
+  // Filtered reports for Triage (disappears once managed, dispatched, or resolved when in action_needed)
   const filteredReports = reports.filter(r => {
-    if (selectedStatusTab !== 'all' && r.status !== selectedStatusTab) return false;
+    if (selectedStatusTab === 'action_needed') {
+      return r.status === 'pending' || r.status === 'pending_verification';
+    }
+    if (selectedStatusTab === 'resolved') {
+      return r.status === 'resolved' || Boolean(r.karmaAwarded);
+    }
+    if (selectedStatusTab !== 'all' && r.status !== selectedStatusTab) {
+      return false;
+    }
     return true;
   });
 
@@ -431,7 +455,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       {/* HQ Command Navigation Tabs */}
       <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
         {[
-          { id: 'triage', label: 'Incident Triage & Dispatch', icon: Activity, count: reports.filter(r => r.status === 'pending').length },
+          { 
+            id: 'triage', 
+            label: 'Incident Triage & Dispatch', 
+            icon: Activity, 
+            count: reports.filter(r => r.status === 'pending' || r.status === 'pending_verification').length 
+          },
           { id: 'missions', label: 'Announce & Deploy Missions', icon: Compass, count: missions.length },
           { id: 'telemetry', label: 'Community Dashboard Controls', icon: Sliders },
           { id: 'broadcast', label: 'Broadcast Official Bulletin', icon: Megaphone },
@@ -480,12 +509,26 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             {/* Status Filters */}
             <div className="flex flex-wrap items-center gap-2 text-xs">
               {[
-                { id: 'all', label: 'All' },
-                { id: 'pending', label: 'Pending Triage' },
-                { id: 'pending_verification', label: `✨ Cleanups to Verify (${reports.filter(r => r.status === 'pending_verification').length})` },
-                { id: 'dispatched', label: 'Dispatched' },
-                { id: 'in-progress', label: 'In Progress' },
-                { id: 'resolved', label: 'Resolved' },
+                { 
+                  id: 'action_needed', 
+                  label: `🚨 Action Needed (${reports.filter(r => r.status === 'pending' || r.status === 'pending_verification').length})` 
+                },
+                { 
+                  id: 'dispatched', 
+                  label: `🚒 Dispatched (${reports.filter(r => r.status === 'dispatched').length})` 
+                },
+                { 
+                  id: 'in-progress', 
+                  label: `In Progress (${reports.filter(r => r.status === 'in-progress').length})` 
+                },
+                { 
+                  id: 'resolved', 
+                  label: `✅ Resolved (${reports.filter(r => r.status === 'resolved' || Boolean(r.karmaAwarded)).length})` 
+                },
+                { 
+                  id: 'all', 
+                  label: `All (${reports.length})` 
+                },
               ].map(st => (
                 <button
                   key={st.id}
@@ -493,7 +536,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   className={`px-3 py-1.5 rounded-xl font-bold uppercase tracking-wider transition min-h-[38px] ${
                     selectedStatusTab === st.id
                       ? 'bg-[#1b4332] text-white shadow-xs'
-                      : st.id === 'pending_verification' && reports.some(r => r.status === 'pending_verification')
+                      : st.id === 'action_needed' && reports.some(r => r.status === 'pending_verification')
                       ? 'bg-amber-100 text-amber-900 border border-amber-300 font-extrabold animate-pulse'
                       : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
                   }`}
@@ -610,13 +653,36 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                           }
                         }}
                         className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 min-h-[44px] ${
-                          report.status === 'pending_verification'
+                          report.status === 'resolved' || Boolean(report.karmaAwarded)
+                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100'
+                            : report.status === 'pending_verification'
                             ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-md'
-                            : 'bg-[#1b4332] hover:bg-[#2d6a4f] text-white'
+                            : report.status === 'dispatched'
+                            ? 'bg-sky-50 text-sky-800 border border-sky-300 hover:bg-sky-100'
+                            : 'bg-[#1b4332] hover:bg-[#2d6a4f] text-white shadow-sm'
                         }`}
                       >
-                        <span>{report.status === 'pending_verification' ? 'Verify Cleanup & Points' : 'Manage & Dispatch'}</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
+                        {report.status === 'resolved' || Boolean(report.karmaAwarded) ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>✓ Resolved (Archive)</span>
+                          </>
+                        ) : report.status === 'pending_verification' ? (
+                          <>
+                            <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                            <span>Verify Cleanup & Points</span>
+                          </>
+                        ) : report.status === 'dispatched' ? (
+                          <>
+                            <Truck className="w-3.5 h-3.5 text-sky-600" />
+                            <span>Dispatched ({report.fieldTeamAssigned?.split(' ')[0] || 'Unit'})</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Manage & Dispatch</span>
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1264,6 +1330,33 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               />
             )}
 
+            {/* RESOLVED / LOCKED STATUS BANNER */}
+            {(selectedReport.status === 'resolved' || Boolean(selectedReport.karmaAwarded)) && (
+              <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 space-y-2">
+                <div className="flex items-center space-x-2 text-emerald-950 font-extrabold text-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <span>Incident Certified & Resolved</span>
+                </div>
+                <p className="text-xs text-emerald-800 leading-relaxed">
+                  This ecological observation has been inspected, remediated, and officially certified by HQ Command.
+                  {selectedReport.resolutionNotes && (
+                    <span className="block mt-1 italic text-emerald-900 font-medium">
+                      Official Remarks: "{selectedReport.resolutionNotes}"
+                    </span>
+                  )}
+                  {selectedReport.karmaAwardedAmount ? (
+                    <span className="block mt-1 font-bold text-emerald-900">
+                      🌱 Karma Bounty of <strong>+{selectedReport.karmaAwardedAmount} Karma Points</strong> allocated to {selectedReport.karmaAwardedTo || selectedReport.resolutionEvidence?.fixerName || 'the steward'}.
+                    </span>
+                  ) : null}
+                </p>
+                <div className="text-[11px] text-emerald-800 bg-white/80 p-2.5 rounded-xl border border-emerald-200 flex items-center space-x-1.5 font-semibold">
+                  <Lock className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                  <span>Terminal State Locked: Incident closed. Re-dispatch and duplicate Karma awards are blocked.</span>
+                </div>
+              </div>
+            )}
+
             {/* CITIZEN FIX RESOLUTION EVIDENCE REVIEW SECTION */}
             {selectedReport.resolutionEvidence ? (
               <div className="space-y-4">
@@ -1384,32 +1477,48 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedReport(null)}
-                    className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 min-h-[44px]"
-                  >
-                    Cancel
-                  </button>
+                {selectedReport.status === 'resolved' || Boolean(selectedReport.karmaAwarded) ? (
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <span className="text-xs font-bold text-emerald-800 flex items-center space-x-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Karma Bounty Awarded & Certified</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedReport(null)}
+                      className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-700 min-h-[44px]"
+                    >
+                      Close Archive View
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedReport(null)}
+                      className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 min-h-[44px]"
+                    >
+                      Cancel
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleRejectFixEvidence(selectedReport)}
-                    className="px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 text-xs font-bold transition min-h-[44px]"
-                  >
-                    Request More Evidence
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRejectFixEvidence(selectedReport)}
+                      className="px-4 py-2 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-900 text-xs font-bold transition min-h-[44px]"
+                    >
+                      Request More Evidence
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleApproveFixEvidence(selectedReport)}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md flex items-center space-x-1.5 min-h-[44px]"
-                  >
-                    <Check className="w-4 h-4 text-white" />
-                    <span>Approve Cleanup & Award +{awardPointsInput} Points</span>
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => handleApproveFixEvidence(selectedReport)}
+                      className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md flex items-center space-x-1.5 min-h-[44px]"
+                    >
+                      <Check className="w-4 h-4 text-white" />
+                      <span>Approve Cleanup & Award +{awardPointsInput} Points</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               /* STANDARD DISPATCH & RESOLVE VIEW */
@@ -1425,58 +1534,91 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                 <p className="text-xs text-gray-600">{selectedReport.description}</p>
 
-                <div className="p-3 rounded-2xl bg-[#f8f9f6] border border-gray-200 text-xs space-y-2">
-                  <label className="block font-bold text-[#1b4332]">Assign Dedicated Field Team</label>
-                  <select
-                    value={assigningTeam}
-                    onChange={(e) => setAssigningTeam(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs text-[#1b4332] bg-white focus:outline-none"
-                  >
-                    {fieldTeams.map((team) => (
-                      <option key={team.id} value={team.name}>
-                        {team.name} ({team.specialty}) - Lead: {team.leadName}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Hide assignment selector if already resolved */}
+                {selectedReport.status !== 'resolved' && !selectedReport.karmaAwarded && (
+                  <div className="p-3 rounded-2xl bg-[#f8f9f6] border border-gray-200 text-xs space-y-2">
+                    <label className="block font-bold text-[#1b4332]">Assign Dedicated Field Team</label>
+                    <select
+                      value={assigningTeam}
+                      onChange={(e) => setAssigningTeam(e.target.value)}
+                      disabled={selectedReport.status === 'dispatched'}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs text-[#1b4332] bg-white focus:outline-none disabled:bg-gray-100 disabled:text-gray-500"
+                    >
+                      {fieldTeams.map((team) => (
+                        <option key={team.id} value={team.name}>
+                          {team.name} ({team.specialty}) - Lead: {team.leadName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-                <div className="space-y-1">
-                  <label className="block text-xs font-bold text-[#1b4332]">Official Resolution / Verification Notes</label>
-                  <textarea
-                    rows={2}
-                    value={resolutionNotes}
-                    onChange={(e) => setResolutionNotes(e.target.value)}
-                    placeholder="Log field verification results, biological acoustics, or clean-up notes..."
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none"
-                  />
-                </div>
+                {selectedReport.status !== 'resolved' && !selectedReport.karmaAwarded && (
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold text-[#1b4332]">Official Resolution / Verification Notes</label>
+                    <textarea
+                      rows={2}
+                      value={resolutionNotes}
+                      onChange={(e) => setResolutionNotes(e.target.value)}
+                      placeholder="Log field verification results, biological acoustics, or clean-up notes..."
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-xs focus:outline-none"
+                    />
+                  </div>
+                )}
 
-                <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedReport(null)}
-                    className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 min-h-[44px]"
-                  >
-                    Close
-                  </button>
+                {selectedReport.status === 'resolved' || Boolean(selectedReport.karmaAwarded) ? (
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <span className="text-xs font-bold text-emerald-800 flex items-center space-x-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Incident Resolved & Closed</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedReport(null)}
+                      className="px-4 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-bold text-gray-700 min-h-[44px]"
+                    >
+                      Close Archive View
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-end gap-2 pt-3 border-t border-gray-100">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedReport(null)}
+                      className="px-3.5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-xs font-semibold text-gray-700 min-h-[44px]"
+                    >
+                      Close
+                    </button>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDispatchTeam(selectedReport)}
-                    className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs min-h-[44px]"
-                  >
-                    Dispatch {assigningTeam.split(' ')[0]}
-                  </button>
+                    {selectedReport.status === 'dispatched' ? (
+                      <button
+                        type="button"
+                        disabled
+                        className="px-4 py-2 rounded-xl bg-sky-100 text-sky-800 text-xs font-bold cursor-default opacity-85 min-h-[44px] flex items-center space-x-1.5"
+                      >
+                        <Truck className="w-3.5 h-3.5" />
+                        <span>Dispatched: {selectedReport.fieldTeamAssigned?.split(' ')[0] || 'Unit'}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleDispatchTeam(selectedReport)}
+                        className="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold shadow-xs min-h-[44px]"
+                      >
+                        Dispatch {assigningTeam.split(' ')[0]}
+                      </button>
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={() => handleResolveIncident(selectedReport)}
-                    className="px-4 py-2 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] text-xs font-extrabold shadow-md flex items-center space-x-1 min-h-[44px]"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Mark Resolved</span>
-                  </button>
-                </div>
+                    <button
+                      type="button"
+                      onClick={() => handleResolveIncident(selectedReport)}
+                      className="px-4 py-2 rounded-xl bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] text-xs font-extrabold shadow-md flex items-center space-x-1 min-h-[44px]"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Mark Resolved</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

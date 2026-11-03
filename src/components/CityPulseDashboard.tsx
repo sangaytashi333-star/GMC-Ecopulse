@@ -27,7 +27,9 @@ import {
   Droplets,
   Gauge,
   WifiOff,
-  Database
+  Database,
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 import { CityMetrics, CitizenReport, Mission, CityInsight, LiveLocationState } from '../types';
 import { GMC_SECTORS, INITIAL_CITY_METRICS, INITIAL_CITY_INSIGHT, INITIAL_REPORTS, INITIAL_MISSIONS, INITIAL_TOP_CONTRIBUTORS } from '../data/initialData';
@@ -69,7 +71,7 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
   onOpenReportModal,
   onUpvoteReport,
   onSelectReport,
-  onJoinMission = () => {},
+  onJoinMission = (_missionId: string) => {},
 }) => {
   const { isOnline } = useOnlineStatus();
   const [isRefreshingInsight, setIsRefreshingInsight] = useState(false);
@@ -581,8 +583,45 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
                 <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
                   <div 
                     className="bg-[#52b788] h-full rounded-full transition-all"
-                    style={{ width: `${(mission.currentParticipants / mission.targetParticipants) * 100}%` }}
+                    style={{ width: `${Math.min(100, (mission.currentParticipants / mission.targetParticipants) * 100)}%` }}
                   />
+                </div>
+
+                {/* Enrollment & Action */}
+                <div className="pt-2 flex items-center justify-between border-t border-gray-100">
+                  <span className="text-[11px] font-medium text-gray-500">
+                    {mission.joined ? (
+                      <span className="inline-flex items-center text-emerald-700 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-[#2d6a4f]" />
+                        Enrolled as Steward
+                      </span>
+                    ) : (
+                      <span>Open for enrollment</span>
+                    )}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onJoinMission(mission.id);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-xs min-h-[34px] ${
+                      mission.joined
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                        : 'bg-[#52b788] hover:bg-[#74c69d] text-[#081c15]'
+                    }`}
+                  >
+                    {mission.joined ? (
+                      <>
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Leave Mission</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3.5 h-3.5" />
+                        <span>Join Mission</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
             ))}

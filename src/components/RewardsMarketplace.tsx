@@ -140,8 +140,8 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
       {activeTab === 'catalog' && (
         <div className="space-y-6">
           
-          {/* Category Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
+          {/* Category Filter Pills with mobile horizontal scroll */}
+          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0 flex-nowrap sm:flex-wrap text-xs">
             {[
               { id: 'all', label: 'All Rewards' },
               { id: 'groceries', label: '🥬 Vegetables & Groceries' },
@@ -154,7 +154,7 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
               <button
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl font-semibold transition ${
+                className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap shrink-0 min-h-[36px] ${
                   selectedCategory === cat.id
                     ? 'bg-[#2d6a4f] text-white'
                     : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
@@ -165,8 +165,8 @@ export const RewardsMarketplace: React.FC<RewardsMarketplaceProps> = ({
             ))}
           </div>
 
-          {/* Rewards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Rewards Grid (1 col mobile, 2 col tablet, 3 col desktop, 4 col wide screen) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {filteredRewards.map((item) => {
               const canAfford = spendablePoints >= item.pointsCost;
 

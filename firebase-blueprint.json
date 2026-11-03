@@ -66,6 +66,18 @@
         "createdAt": {
           "type": "string",
           "description": "ISO timestamp of creation"
+        },
+        "karmaAwarded": {
+          "type": "boolean",
+          "description": "Whether karma has been allocated by HQ"
+        },
+        "karmaAwardedAmount": {
+          "type": "number",
+          "description": "Exact karma points disbursed"
+        },
+        "karmaAwardedTo": {
+          "type": "string",
+          "description": "Email or name of the steward who received the karma bounty"
         }
       },
       "required": ["id", "category", "title", "description", "status", "pointsAwarded", "authorId", "authorName"]

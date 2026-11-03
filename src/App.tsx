@@ -18,7 +18,9 @@ import {
   saveCachedMissions, 
   queueOfflineAction, 
   getQueuedActions, 
-  clearQueuedActions 
+  clearQueuedActions,
+  getLocalJoinedMissionIds,
+  saveLocalJoinedMissionIds
 } from './lib/offlineStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { 
@@ -83,18 +85,6 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState<NavTabId>('map');
   const [reports, setReports] = useState<CitizenReport[]>(INITIAL_REPORTS);
-  // Initialized from offline cache to support instant boot in remote forest sectors
-  const [missions, setMissions] = useState<Mission[]>(() => getCachedMissions());
-  const [rewards, setRewards] = useState<RewardItem[]>(INITIAL_REWARDS);
-  
-  // Real-time Geolocation Hook with real-time GPS & simulation capabilities
-  const {
-    locationState: userLocation,
-    startRealLocationTracking: recenterGPS,
-    setSimulatedCoords: simulateGMCLocation,
-    toggleLiveTracking: toggleTracking,
-  } = useLiveLocation();
-
   // Persisted citizen profile
   const [user, setUser] = useState<UserProfile>(() => {
     try {
@@ -105,6 +95,32 @@ export default function App() {
     }
     return INITIAL_USER;
   });
+
+  // Initialized from offline cache to support instant boot in remote forest sectors
+  const [missions, setMissions] = useState<Mission[]>(() => {
+    const cached = getCachedMissions();
+    const userEmail = (INITIAL_USER.email || 'sangaytashi.333@gmail.com').toLowerCase();
+    const localJoined = getLocalJoinedMissionIds(userEmail);
+    return cached.map(m => {
+      const isEnrolled = Boolean(
+        (m.participantEmails && m.participantEmails.some(e => e.toLowerCase() === userEmail)) ||
+        localJoined.includes(m.id)
+      );
+      return {
+        ...m,
+        joined: isEnrolled
+      };
+    });
+  });
+  const [rewards, setRewards] = useState<RewardItem[]>(INITIAL_REWARDS);
+  
+  // Real-time Geolocation Hook with real-time GPS & simulation capabilities
+  const {
+    locationState: userLocation,
+    startRealLocationTracking: recenterGPS,
+    setSimulatedCoords: simulateGMCLocation,
+    toggleLiveTracking: toggleTracking,
+  } = useLiveLocation();
 
   // Critical City Metrics initialized from offline cache
   const [metrics, setMetrics] = useState<CityMetrics>(() => getCachedMetrics());
@@ -234,10 +250,27 @@ export default function App() {
       }
     });
 
-    // 5. Real-time missions stream
+    // 5. Real-time missions stream with user-specific enrollment resolution
     const unsubMissions = subscribeToMissions((liveMissions) => {
       if (liveMissions && liveMissions.length > 0) {
-        setMissions(liveMissions);
+        const currentUserEmail = (user.email || 'sangaytashi.333@gmail.com').toLowerCase();
+        const localJoined = getLocalJoinedMissionIds(currentUserEmail);
+        const resolved = liveMissions.map(m => {
+          const isEnrolled = Boolean(
+            (m.participantEmails && m.participantEmails.some(e => e.toLowerCase() === currentUserEmail)) ||
+            (user.joinedMissionIds && user.joinedMissionIds.includes(m.id)) ||
+            localJoined.includes(m.id)
+          );
+          return {
+            ...m,
+            joined: isEnrolled,
+            currentParticipants: m.participantEmails && m.participantEmails.length > 0
+              ? m.participantEmails.length
+              : m.currentParticipants
+          };
+        });
+        setMissions(resolved);
+        saveCachedMissions(resolved);
       }
     });
 
@@ -421,62 +454,133 @@ export default function App() {
     ]);
   };
 
-  // Join or Leave mission
+  // Join or Leave mission (Toggle with strict enrolled checking, participant list, and karma balance preservation)
   const handleJoinMission = (missionId: string) => {
+    const targetMission = missions.find(m => m.id === missionId);
+    if (!targetMission) return;
+
+    const userEmail = (user.email || 'sangaytashi.333@gmail.com').toLowerCase();
+    const currentJoinedMissions = user.joinedMissionIds || getLocalJoinedMissionIds(userEmail);
+    const isCurrentlyJoined = Boolean(
+      targetMission.joined ||
+      (targetMission.participantEmails && targetMission.participantEmails.some(e => e.toLowerCase() === userEmail)) ||
+      currentJoinedMissions.includes(missionId)
+    );
+
+    const willJoin = !isCurrentlyJoined;
+
+    // 1. Calculate updated participant emails
+    const existingEmails = targetMission.participantEmails || [];
+    let nextEmails: string[];
+    let nextParticipants: number;
+
+    if (willJoin) {
+      nextEmails = Array.from(new Set([...existingEmails, userEmail]));
+      nextParticipants = nextEmails.length > 0 ? nextEmails.length : targetMission.currentParticipants + 1;
+    } else {
+      nextEmails = existingEmails.filter(e => e.toLowerCase() !== userEmail);
+      nextParticipants = Math.max(0, nextEmails.length > 0 ? nextEmails.length : targetMission.currentParticipants - 1);
+    }
+
+    // 2. Calculate updated user joined mission IDs
+    let nextJoinedMissions: string[];
+    if (willJoin) {
+      nextJoinedMissions = Array.from(new Set([...currentJoinedMissions, missionId]));
+    } else {
+      nextJoinedMissions = currentJoinedMissions.filter(id => id !== missionId);
+    }
+    saveLocalJoinedMissionIds(userEmail, nextJoinedMissions);
+
+    // 3. Update local missions state immediately
     setMissions(prev =>
       prev.map(m => {
         if (m.id === missionId) {
-          const joined = !m.joined;
-          const currentParticipants = joined ? m.currentParticipants + 1 : Math.max(0, m.currentParticipants - 1);
-          
-          // Optimistically record offline action for remote sector offline resilience
-          queueOfflineAction({
-            type: 'join_mission',
-            payload: { missionId, joined, currentParticipants },
-            sector: m.sector
-          });
-
-          // Persist mission state to Firestore (syncs immediately if online or queues if offline)
-          updateMissionInFirestore(missionId, {
-            currentParticipants
-          }).catch((err) => {
-            console.warn('Mission action saved to remote offline cache:', err);
-          });
-
-          if (joined) {
-            // Give steward participation karma
-            setUser(u => {
-              const currentMissions = u.totalMissionsCount || u.missionsCompleted || 0;
-              const updatedUser: UserProfile = {
-                ...u,
-                spendablePoints: (u.spendablePoints || 0) + m.rewardPoints,
-                totalKarmaPoints: (u.totalKarmaPoints || 0) + m.rewardPoints,
-                totalMissionsCount: currentMissions + 1,
-                missionsCompleted: currentMissions + 1,
-                treesPlanted: m.category === 'revegetation' ? (u.treesPlanted || 0) + 5 : (u.treesPlanted || 0)
-              };
-              saveUserToFirestore(updatedUser).catch(console.error);
-              return updatedUser;
-            });
-
-            const joinNotifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-            setNotifications(n => [
-              {
-                id: joinNotifId,
-                title: 'Enrolled in Mission',
-                message: `Joined "${m.title}". +${m.rewardPoints} Karma reserved.`,
-                time: 'Just now',
-                read: false
-              },
-              ...n
-            ]);
-          }
-
-          return { ...m, joined, currentParticipants };
+          return {
+            ...m,
+            joined: willJoin,
+            currentParticipants: nextParticipants,
+            participantEmails: nextEmails
+          };
         }
         return m;
       })
     );
+
+    // 4. Optimistically record offline action for remote sector offline resilience
+    queueOfflineAction({
+      type: willJoin ? 'join_mission' : 'leave_mission',
+      payload: { missionId, joined: willJoin, currentParticipants: nextParticipants, userEmail },
+      sector: targetMission.sector
+    });
+
+    // 5. Persist mission state to Firestore
+    updateMissionInFirestore(missionId, {
+      currentParticipants: nextParticipants,
+      participantEmails: nextEmails
+    }).catch((err) => {
+      console.warn('Mission action saved to remote offline cache:', err);
+    });
+
+    // 6. Update user profile and karma points safely (no multi-join exploit or lost leave option)
+    setUser(u => {
+      const currentMissions = u.totalMissionsCount || u.missionsCompleted || 0;
+      let newKarma = u.totalKarmaPoints || 0;
+      let newSpendable = u.spendablePoints || 0;
+      let newMissionsCount = currentMissions;
+      let newTrees = u.treesPlanted || 0;
+
+      if (willJoin) {
+        newKarma += targetMission.rewardPoints;
+        newSpendable += targetMission.rewardPoints;
+        newMissionsCount += 1;
+        if (targetMission.category === 'revegetation') newTrees += 5;
+      } else {
+        newKarma = Math.max(0, newKarma - targetMission.rewardPoints);
+        newSpendable = Math.max(0, newSpendable - targetMission.rewardPoints);
+        newMissionsCount = Math.max(0, newMissionsCount - 1);
+        if (targetMission.category === 'revegetation') newTrees = Math.max(0, newTrees - 5);
+      }
+
+      const updatedUser: UserProfile = {
+        ...u,
+        spendablePoints: newSpendable,
+        totalKarmaPoints: newKarma,
+        totalMissionsCount: newMissionsCount,
+        missionsCompleted: newMissionsCount,
+        treesPlanted: newTrees,
+        joinedMissionIds: nextJoinedMissions
+      };
+      saveUserToFirestore(updatedUser).catch(console.error);
+      return updatedUser;
+    });
+
+    // 7. Notification & audio feedback
+    const notifId = `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    if (willJoin) {
+      setNotifications(n => [
+        {
+          id: notifId,
+          title: '🌱 Enrolled in Mission',
+          message: `Joined "${targetMission.title}". +${targetMission.rewardPoints} Karma reserved.`,
+          time: 'Just now',
+          read: false
+        },
+        ...n
+      ]);
+      playMindfulChime('karma');
+    } else {
+      setNotifications(n => [
+        {
+          id: notifId,
+          title: 'Withdrawn from Mission',
+          message: `You have left "${targetMission.title}". Seat freed for other stewards.`,
+          time: 'Just now',
+          read: false
+        },
+        ...n
+      ]);
+      playMindfulChime('bell');
+    }
   };
 
   // Propose mission
@@ -613,36 +717,66 @@ export default function App() {
 
   // HQ Official approves citizen cleanup and distributes Karma bounty
   const handleApproveResolution = (reportId: string, bonusPoints: number, officialNotes?: string) => {
-    let fixerName = '';
-    let reportTitle = '';
+    const targetReport = reports.find(r => r.id === reportId);
+    if (!targetReport) return;
+
+    // Security Gate: Prevent multiple karma allocations for the same incident
+    if (targetReport.status === 'resolved' || targetReport.karmaAwarded || targetReport.resolutionEvidence?.isVerifiedByHQ) {
+      console.warn(`[GMC HQ Security] Report #${reportId} is already resolved. Multiple Karma allocations prevented.`);
+      setNotifications(prev => [
+        {
+          id: `notif-prevent-${Date.now()}`,
+          title: 'Security Alert: Duplicate Karma Blocked',
+          message: `Karma bounty for "${targetReport.title}" was already allocated. Duplicate award prevented.`,
+          time: 'Just now',
+          read: false
+        },
+        ...prev
+      ]);
+      playMindfulChime('bell');
+      return;
+    }
+
+    const fixerName = targetReport.resolutionEvidence?.fixerName || user.name || 'Citizen Steward';
+    const fixerEmail = targetReport.resolutionEvidence?.fixerEmail || user.email;
+    const reporterName = targetReport.reporterName || 'Citizen Steward';
+    const reportTitle = targetReport.title;
+
+    const updatedEvidence: ResolutionEvidence | undefined = targetReport.resolutionEvidence
+      ? {
+          ...targetReport.resolutionEvidence,
+          isVerifiedByHQ: true,
+          verifiedByOfficial: user.name,
+          pointsAwarded: bonusPoints,
+          karmaAwarded: true,
+          karmaAwardedTo: fixerEmail || fixerName
+        }
+      : undefined;
+
+    // Persist to Firestore
+    updateReportInFirestore(reportId, {
+      status: 'resolved' as ReportStatus,
+      resolvedAt: 'Just now',
+      resolutionNotes: officialNotes || 'Remediation verified & certified by GMC HQ Command.',
+      karmaAwarded: true,
+      karmaAwardedAmount: bonusPoints,
+      karmaAwardedTo: fixerEmail || fixerName,
+      karmaAwardedAt: new Date().toISOString(),
+      resolutionEvidence: updatedEvidence
+    }).catch(console.error);
 
     setReports(prev =>
       prev.map(r => {
         if (r.id === reportId) {
-          fixerName = r.resolutionEvidence?.fixerName || user.name;
-          reportTitle = r.title;
-          const updatedEvidence = r.resolutionEvidence
-            ? {
-                ...r.resolutionEvidence,
-                isVerifiedByHQ: true,
-                verifiedByOfficial: user.name,
-                pointsAwarded: bonusPoints
-              }
-            : undefined;
-
-          // Persist to Firestore
-          updateReportInFirestore(reportId, {
-            status: 'resolved' as ReportStatus,
-            resolvedAt: 'Just now',
-            resolutionNotes: officialNotes || 'Remediation verified & certified by GMC HQ Command.',
-            resolutionEvidence: updatedEvidence
-          }).catch(console.error);
-
           return {
             ...r,
             status: 'resolved' as ReportStatus,
             resolvedAt: 'Just now',
             resolutionNotes: officialNotes || 'Remediation verified & certified by GMC HQ Command.',
+            karmaAwarded: true,
+            karmaAwardedAmount: bonusPoints,
+            karmaAwardedTo: fixerEmail || fixerName,
+            karmaAwardedAt: new Date().toISOString(),
             resolutionEvidence: updatedEvidence
           };
         }
@@ -679,16 +813,24 @@ export default function App() {
       return nextMetrics;
     });
 
-    setNotifications(prev => [
-      {
-        id: `notif-cert-${Date.now()}`,
-        title: '✅ Clean-up Certified & Karma Awarded',
-        message: `Remediation for "${reportTitle}" approved by HQ Command. +${bonusPoints} Karma Points awarded to ${fixerName || 'Steward'}!`,
-        time: 'Just now',
-        read: false
-      },
-      ...prev
-    ]);
+    // Notify BOTH the Cleaner / Fixer AND the Incident Owner / Reporter
+    const cleanerNotif = {
+      id: `notif-cleaner-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title: '🌱 Karma Bounty Allocated!',
+      message: `GMC HQ Command certified your cleanup for "${reportTitle}". +${bonusPoints} Karma Points credited to ${fixerName}!`,
+      time: 'Just now',
+      read: false
+    };
+
+    const ownerNotif = {
+      id: `notif-owner-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      title: '✨ Incident Resolved & Certified',
+      message: `Your observation "${reportTitle}" submitted by ${reporterName} has been remediated by ${fixerName} and certified resolved by HQ Command.`,
+      time: 'Just now',
+      read: false
+    };
+
+    setNotifications(prev => [cleanerNotif, ownerNotif, ...prev]);
 
     playMindfulChime('karma');
   };
@@ -779,12 +921,22 @@ export default function App() {
     fieldTeamAssigned?: string, 
     notes?: string
   ) => {
+    const target = reports.find(r => r.id === reportId);
+    if (!target) return;
+
+    // Prevent redundant status actions
+    if (target.status === 'resolved' && newStatus === 'resolved') return;
+    if (target.status === 'dispatched' && newStatus === 'dispatched') return;
+
+    const wasAlreadyResolved = target.status === 'resolved';
+    const resolvedTime = newStatus === 'resolved' ? (target.resolvedAt || 'Just now') : undefined;
+
     // Persist to Firestore
     updateReportInFirestore(reportId, {
       status: newStatus,
-      fieldTeamAssigned,
-      resolutionNotes: notes,
-      resolvedAt: newStatus === 'resolved' ? 'Just now' : undefined
+      fieldTeamAssigned: fieldTeamAssigned || target.fieldTeamAssigned,
+      resolutionNotes: notes || target.resolutionNotes,
+      resolvedAt: resolvedTime
     }).catch(console.error);
 
     setReports(prev =>
@@ -795,14 +947,14 @@ export default function App() {
             status: newStatus,
             fieldTeamAssigned: fieldTeamAssigned || r.fieldTeamAssigned,
             resolutionNotes: notes || r.resolutionNotes,
-            resolvedAt: newStatus === 'resolved' ? 'Just now' : undefined
+            resolvedAt: resolvedTime
           };
         }
         return r;
       })
     );
 
-    if (newStatus === 'resolved') {
+    if (newStatus === 'resolved' && !wasAlreadyResolved) {
       setMetrics(m => {
         const nextM = {
           ...m,
@@ -812,6 +964,32 @@ export default function App() {
         setDoc(doc(db, 'metrics', 'current'), nextM).catch(console.error);
         return nextM;
       });
+
+      // Notify the observation owner
+      setNotifications(prev => [
+        {
+          id: `notif-owner-res-${Date.now()}`,
+          title: '✅ Observation Marked Resolved',
+          message: `Your observation "${target.title}" in ${target.sector} has been inspected and marked resolved by HQ Command.`,
+          time: 'Just now',
+          read: false
+        },
+        ...prev
+      ]);
+      playMindfulChime('badge');
+    } else if (newStatus === 'dispatched') {
+      const teamName = fieldTeamAssigned || target.fieldTeamAssigned || 'Field Unit';
+      setNotifications(prev => [
+        {
+          id: `notif-owner-disp-${Date.now()}`,
+          title: '🚒 Ranger Unit Dispatched',
+          message: `HQ Command deployed ${teamName} to coordinates for observation "${target.title}".`,
+          time: 'Just now',
+          read: false
+        },
+        ...prev
+      ]);
+      playMindfulChime('karma');
     }
   };
 
@@ -996,7 +1174,7 @@ export default function App() {
       />
 
       {/* Main Viewport Container with mobile bottom safe space for bottom nav */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-7 pb-24 md:pb-10 relative z-10">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-7 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-10 relative z-10">
         
         {/* 1. City Pulse Dashboard */}
         {currentView === 'dashboard' && (

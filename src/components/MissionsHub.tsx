@@ -18,7 +18,9 @@ import {
   Hourglass,
   ShieldAlert,
   FileCheck2,
-  WifiOff
+  WifiOff,
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Mission, Coordinates, UserProfile } from '../types';
@@ -84,6 +86,8 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
         colors: ['#52b788', '#74c69d', '#1b4332']
       });
       playMindfulChime('karma');
+    } else {
+      playMindfulChime('bell');
     }
     onJoinMission(mission.id);
   };
@@ -233,10 +237,10 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
       </div>
 
       {/* Filters Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-gray-200 shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-2xl border border-gray-200 shadow-xs">
         
-        {/* Category Pills */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        {/* Category Pills with horizontal scroll on mobile */}
+        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0 flex-nowrap sm:flex-wrap text-xs">
           {[
             { id: 'all', label: 'All Categories' },
             { id: 'revegetation', label: '🌱 Revegetation' },
@@ -247,7 +251,7 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
             <button
               key={cat.id}
               onClick={() => setCategoryFilter(cat.id)}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition ${
+              className={`px-3 py-1.5 rounded-xl font-semibold transition whitespace-nowrap shrink-0 min-h-[36px] ${
                 categoryFilter === cat.id
                   ? 'bg-[#1b4332] text-white shadow-xs'
                   : 'bg-[#f8f9f6] text-gray-600 hover:bg-gray-100'
@@ -259,12 +263,12 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
         </div>
 
         {/* Sector Filter */}
-        <div className="flex items-center space-x-2 text-xs">
+        <div className="flex items-center space-x-2 text-xs shrink-0">
           <span className="font-semibold text-gray-500">District:</span>
           <select
             value={sectorFilter}
             onChange={(e) => setSectorFilter(e.target.value)}
-            className="bg-[#f8f9f6] border border-gray-200 rounded-lg px-2.5 py-1.5 font-medium text-[#1b4332] focus:outline-none"
+            className="bg-[#f8f9f6] border border-gray-200 rounded-lg px-2.5 py-1.5 font-medium text-[#1b4332] focus:outline-none min-h-[36px]"
           >
             <option value="all">All Sectors</option>
             {GMC_SECTORS.map(s => (
@@ -288,8 +292,8 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
         </div>
       )}
 
-      {/* Missions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Missions Grid (1 col on mobile, 2 cols on tablet, 3 cols on large desktop) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-6">
         {filteredMissions.map((mission) => {
           const isFull = mission.currentParticipants >= mission.targetParticipants;
           const percentFilled = Math.min(100, Math.round((mission.currentParticipants / mission.targetParticipants) * 100));
@@ -397,13 +401,23 @@ export const MissionsHub: React.FC<MissionsHubProps> = ({
                 ) : (
                   <button
                     onClick={() => handleToggleJoin(mission)}
-                    className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition ${
+                    className={`px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs shadow-xs transition flex items-center space-x-1.5 min-h-[40px] active:scale-95 ${
                       mission.joined
-                        ? 'bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-600'
+                        ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
                         : 'bg-[#52b788] hover:bg-[#74c69d] text-[#081c15] shadow-md'
                     }`}
                   >
-                    {mission.joined ? 'Leave Mission' : isFull ? 'Join Waitlist' : 'Join Mission'}
+                    {mission.joined ? (
+                      <>
+                        <LogOut className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span>Leave Mission</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-3.5 h-3.5 text-[#081c15] shrink-0" />
+                        <span>{isFull ? 'Join Waitlist' : 'Join Mission'}</span>
+                      </>
+                    )}
                   </button>
                 )}
               </div>
