@@ -178,9 +178,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Right Action Bar */}
             <div className="flex items-center space-x-1.5 sm:space-x-2 lg:space-x-2.5">
 
-              {/* Desktop-only secondary controls: PWA, Offline, Sound, Bell (moved to mobile drawer on <lg) */}
+              {/* Universal Web App Download / Install Action (Visible on all devices) */}
+              <PWAInstallButton />
+
+              {/* Desktop-only secondary controls: Offline, Sound, Bell (moved to mobile drawer on <lg) */}
               <div className="hidden lg:flex items-center space-x-2">
-                <PWAInstallButton />
                 <OfflineIndicator onForceSync={onForceSync} isSyncing={isSyncing} />
 
                 {/* Mindful Audio Toggle */}
@@ -392,11 +394,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         {mobileMenuOpen && (
           <div className="lg:hidden bg-[#0d2818]/98 backdrop-blur-xl border-b border-[#2d6a4f]/60 px-4 py-4 space-y-4 animate-in slide-in-from-top-2 duration-200 max-h-[85vh] overflow-y-auto">
             
-            {/* Quick Status Bar: Offline, PWA & Sound Controls */}
+            {/* Prominent Download App Banner */}
+            <PWAInstallButton variant="menu-item" />
+
+            {/* Quick Status Bar: Offline & Sound Controls */}
             <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-[#1b4332]/80 border border-[#52b788]/30">
               <div className="flex items-center space-x-2">
                 <OfflineIndicator onForceSync={onForceSync} isSyncing={isSyncing} />
-                <PWAInstallButton />
               </div>
 
               <div className="flex items-center space-x-2">

@@ -1,0 +1,31 @@
+{
+  "id": "/",
+  "name": "Gelephu Ecopulse | GMC",
+  "short_name": "EcoPulse",
+  "description": "Mindful environmental stewardship, city-wide harmony monitoring, and ecological resilience platform for Gelephu Mindfulness City.",
+  "theme_color": "#1b4332",
+  "background_color": "#f8f5ed",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

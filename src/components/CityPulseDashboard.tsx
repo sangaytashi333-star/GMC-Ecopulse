@@ -37,6 +37,7 @@ import { playMindfulChime } from '../utils/audio';
 import { RealLeafletMap } from './RealLeafletMap';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { getLastSyncTime } from '../lib/offlineStorage';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface CityPulseDashboardProps {
   metrics?: CityMetrics;
@@ -198,6 +199,9 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
           </div>
         </div>
       </section>
+
+      {/* PWA Offline Download & Installation Banner */}
+      <PWAInstallButton variant="banner" />
 
       {/* 2. Urban Biosphere Vital Signs: UV, Radiation, Weather & Core Eco-Telemetry */}
       <section className="space-y-4">

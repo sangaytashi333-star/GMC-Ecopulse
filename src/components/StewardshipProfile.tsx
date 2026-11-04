@@ -30,6 +30,7 @@ import confetti from 'canvas-confetti';
 import { UserProfile, Badge, CitizenReport, BadgeCategory } from '../types';
 import { playMindfulChime } from '../utils/audio';
 import { computeUserBadges, getTierColorClasses, getTierMedalSymbol, ALL_BADGE_DEFINITIONS } from '../utils/badgeSystem';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface StewardshipProfileProps {
   user: UserProfile;
@@ -699,6 +700,9 @@ export const StewardshipProfile: React.FC<StewardshipProfileProps> = ({
           </div>
         </div>
       )}
+
+      {/* PWA App Download & Offline Access Card */}
+      <PWAInstallButton variant="banner" />
 
       {/* 4. Lifetime Impact Metrics Grid */}
       <section className="space-y-4">
