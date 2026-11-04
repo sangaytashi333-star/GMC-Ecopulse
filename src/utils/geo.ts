@@ -52,3 +52,64 @@ export const GMC_CENTER_COORDS: Coordinates = {
   lat: 26.8858,
   lng: 90.5015,
 };
+
+// Convert bearing in degrees to human-readable compass cardinal
+export function getCompassDirection(bearing: number | null | undefined): string {
+  if (bearing === null || bearing === undefined || isNaN(bearing)) return 'N';
+  const normalized = ((bearing % 360) + 360) % 360;
+  const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const index = Math.round(normalized / 22.5) % 16;
+  return directions[index];
+}
+
+// Curated live patrol routes through GMC corridors for simulation and demo
+export const GMC_PATROL_ROUTES: { id: string; name: string; sector: string; waypoints: Coordinates[] }[] = [
+  {
+    id: 'spine-patrol',
+    name: 'Mindfulness Spine & Central Bridge Canopy',
+    sector: 'Sector 1: Mindfulness Spine & Central Bridge Canopy',
+    waypoints: [
+      { lat: 26.8858, lng: 90.5015 },
+      { lat: 26.8872, lng: 90.5032 },
+      { lat: 26.8890, lng: 90.5050 },
+      { lat: 26.8908, lng: 90.5065 },
+      { lat: 26.8925, lng: 90.5078 },
+      { lat: 26.8940, lng: 90.5095 },
+      { lat: 26.8955, lng: 90.5110 },
+      { lat: 26.8942, lng: 90.5098 },
+      { lat: 26.8920, lng: 90.5075 },
+      { lat: 26.8895, lng: 90.5052 },
+      { lat: 26.8870, lng: 90.5030 },
+      { lat: 26.8858, lng: 90.5015 }
+    ]
+  },
+  {
+    id: 'mao-river-patrol',
+    name: 'Mao River Sacred Hydrology Corridor',
+    sector: 'Sector 2: Mao River Watershed & Clean Riparian Zones',
+    waypoints: [
+      { lat: 26.8930, lng: 90.5085 },
+      { lat: 26.8950, lng: 90.5105 },
+      { lat: 26.8975, lng: 90.5135 },
+      { lat: 26.9010, lng: 90.5180 },
+      { lat: 26.9035, lng: 90.5215 },
+      { lat: 26.9015, lng: 90.5185 },
+      { lat: 26.8980, lng: 90.5140 },
+      { lat: 26.8945, lng: 90.5095 }
+    ]
+  },
+  {
+    id: 'phibsoo-buffer',
+    name: 'Phibsoo Wildlife & Elephant Migration Buffer',
+    sector: 'Sector 3: Phibsoo Wildlife Buffer & Canopy Bridges',
+    waypoints: [
+      { lat: 26.8780, lng: 90.4910 },
+      { lat: 26.8805, lng: 90.4935 },
+      { lat: 26.8830, lng: 90.4965 },
+      { lat: 26.8855, lng: 90.4990 },
+      { lat: 26.8835, lng: 90.4970 },
+      { lat: 26.8800, lng: 90.4930 }
+    ]
+  }
+];
+

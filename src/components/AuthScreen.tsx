@@ -285,8 +285,15 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           {/* Top Logo */}
           <div className="relative z-10">
             <div className="flex items-center space-x-3 mb-6">
-              <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md p-0.5 border border-[#52b788]/40 flex items-center justify-center shadow-lg">
-                <span className="text-2xl">🌿</span>
+              <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md p-1 border border-[#52b788]/40 flex items-center justify-center shadow-lg overflow-hidden shrink-0">
+                <img 
+                  src="/app-logo.png" 
+                  alt="GMC Ecopulse Logo" 
+                  className="w-full h-full object-contain rounded-xl drop-shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.src = '/assets/aistudio/Screenshot_2026-11-03_181211_7b7d5d60.png';
+                  }}
+                />
               </div>
               <div>
                 <h1 className="font-extrabold text-xl tracking-tight text-white flex items-center gap-2">

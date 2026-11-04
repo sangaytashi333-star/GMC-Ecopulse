@@ -110,8 +110,8 @@ export const CityPulseDashboard: React.FC<CityPulseDashboardProps> = ({
           
           {/* Left Column: Headline & Mindfulness Welcome */}
           <div className="lg:col-span-7 space-y-4">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#1E4D3B]/60 border border-[#DCC79A]/40 text-[#F4E9D4] text-xs font-semibold tracking-wide backdrop-blur-sm">
-              <span className="w-2 h-2 rounded-full bg-[#6FB68D] animate-ping" />
+            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#1E4D3B]/70 border border-[#DCC79A]/40 text-[#F4E9D4] text-xs font-semibold tracking-wide backdrop-blur-sm">
+              <img src="/app-logo.png" alt="GMC Ecopulse" className="w-4 h-4 rounded-full object-contain shrink-0" />
               <span>GMC-ecopulse • SENSE • LIVE • THRIVE</span>
             </div>
 

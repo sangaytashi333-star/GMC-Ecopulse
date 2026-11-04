@@ -87,7 +87,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Incident Triage State (defaults to action_needed so managed/resolved items disappear)
   const [selectedStatusTab, setSelectedStatusTab] = useState<'action_needed' | 'dispatched' | 'in-progress' | 'resolved' | 'all'>('action_needed');
-  const [selectedReport, setSelectedReport] = useState<CitizenReport | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
+  const selectedReport = selectedReportId ? (reports.find(r => r.id === selectedReportId) || null) : null;
+  const setSelectedReport = (report: CitizenReport | null) => {
+    setSelectedReportId(report ? report.id : null);
+  };
   const [assigningTeam, setAssigningTeam] = useState<string>(fieldTeams[0]?.name || 'Riparian Hydrology Unit');
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [awardPointsInput, setAwardPointsInput] = useState<number>(200);

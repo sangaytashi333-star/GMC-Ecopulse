@@ -105,12 +105,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center justify-between h-16 sm:h-18">
             
             {/* Logo & City Identity */}
-            <div className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer select-none" onClick={() => handleNavClick('dashboard')}>
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#40916c] to-[#1b4332] p-0.5 shadow-md flex items-center justify-center border border-[#52b788]/40 shrink-0">
-                <div className="w-full h-full rounded-[10px] bg-[#1b4332] flex items-center justify-center relative overflow-hidden">
-                  <span className="text-lg sm:text-xl">🌿</span>
-                  <span className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-[#52b788] rounded-full animate-ping opacity-75" />
-                </div>
+            <div className="flex items-center space-x-2.5 sm:space-x-3 cursor-pointer select-none group" onClick={() => handleNavClick('dashboard')}>
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/10 p-0.5 shadow-md flex items-center justify-center border border-[#52b788]/40 shrink-0 relative overflow-hidden group-hover:scale-105 transition-transform">
+                <img 
+                  src="/app-logo.png" 
+                  alt="GMC Ecopulse Logo" 
+                  className="w-full h-full object-contain rounded-lg drop-shadow-sm"
+                  onError={(e) => {
+                    e.currentTarget.src = '/assets/aistudio/Screenshot_2026-11-03_181211_7b7d5d60.png';
+                  }}
+                />
+                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#52b788] rounded-full animate-ping opacity-75 pointer-events-none" />
               </div>
               <div className="min-w-0">
                 <div className="flex items-center space-x-1.5">

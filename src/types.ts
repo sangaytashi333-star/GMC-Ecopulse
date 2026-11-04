@@ -26,6 +26,9 @@ export interface LiveLocationState {
   timestamp: number;
   nearestSector: string;
   isLiveTracking: boolean;
+  isAutoFollow?: boolean;
+  trail?: Coordinates[];
+  distanceTraveledKm?: number;
   mode: 'real' | 'simulated';
   status: 'idle' | 'requesting' | 'active' | 'denied' | 'unavailable';
   errorMessage?: string;

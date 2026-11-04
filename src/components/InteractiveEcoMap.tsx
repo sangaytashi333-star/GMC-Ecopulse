@@ -46,6 +46,10 @@ interface InteractiveEcoMapProps {
   onRecenterGPS: () => void;
   onToggleTracking: () => void;
   onSimulateGMCLocation: (coords: Coordinates, sectorName: string) => void;
+  onStartPatrolSimulation?: (routeId?: string) => void;
+  onSetAutoFollow?: (enable: boolean) => void;
+  onToggleAutoFollow?: () => void;
+  onClearTrail?: () => void;
 }
 
 export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
@@ -62,6 +66,10 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
   onRecenterGPS,
   onToggleTracking,
   onSimulateGMCLocation,
+  onStartPatrolSimulation,
+  onSetAutoFollow,
+  onToggleAutoFollow,
+  onClearTrail,
 }) => {
   const [mapEngine, setMapEngine] = useState<'real' | 'schematic'>('real');
   const [mapTileStyle, setMapTileStyle] = useState<MapTileStyle>('satellite');
@@ -276,6 +284,10 @@ export const InteractiveEcoMap: React.FC<InteractiveEcoMapProps> = ({
           onRecenterGPS={onRecenterGPS}
           onToggleTracking={onToggleTracking}
           onSimulateGMCLocation={onSimulateGMCLocation}
+          onStartPatrolSimulation={onStartPatrolSimulation}
+          onSetAutoFollow={onSetAutoFollow}
+          onToggleAutoFollow={onToggleAutoFollow}
+          onClearTrail={onClearTrail}
         />
       )}
 

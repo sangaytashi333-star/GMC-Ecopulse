@@ -119,7 +119,11 @@ export default function App() {
     locationState: userLocation,
     startRealLocationTracking: recenterGPS,
     setSimulatedCoords: simulateGMCLocation,
+    startPatrolSimulation,
     toggleLiveTracking: toggleTracking,
+    setAutoFollow,
+    toggleAutoFollow,
+    clearTrail,
   } = useLiveLocation();
 
   // Critical City Metrics initialized from offline cache
@@ -1219,6 +1223,10 @@ export default function App() {
             onRecenterGPS={recenterGPS}
             onToggleTracking={toggleTracking}
             onSimulateGMCLocation={simulateGMCLocation}
+            onStartPatrolSimulation={startPatrolSimulation}
+            onSetAutoFollow={setAutoFollow}
+            onToggleAutoFollow={toggleAutoFollow}
+            onClearTrail={clearTrail}
           />
         )}
 

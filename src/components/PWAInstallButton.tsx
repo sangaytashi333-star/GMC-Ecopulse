@@ -58,9 +58,9 @@ export const PWAInstallButton: React.FC<{ className?: string }> = ({ className =
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
             <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl border border-[#2D6A4F]/20 text-[#192723]">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-[#1B4332] flex items-center justify-center text-white font-bold text-xs">
-                    GMC
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#1B4332] p-0.5 border border-[#52B788]/40 flex items-center justify-center overflow-hidden shrink-0">
+                    <img src="/app-logo.png" alt="GMC Ecopulse" className="w-full h-full object-contain rounded" />
                   </div>
                   <h3 className="text-base font-bold text-[#1B4332]">Install on iPhone / iPad</h3>
                 </div>
