@@ -63,27 +63,36 @@ import {
   updateMissionInFirestore, 
   saveVoucherToFirestore, 
   saveUserToFirestore,
+  auth,
   db
 } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
 const STORAGE_AUTH_KEY = 'gmc_citizen_auth_user';
 const SESSION_AUTH_KEY = 'gmc_citizen_session_authenticated';
 
 export default function App() {
-  // Enforce authentic citizen profile state (default active so user directly lands on live map)
+  // Require new users or new devices to sign in first.
+  // When an authenticated session is established on this device, remember it so returning visits take them directly to the Citizen Dashboard.
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     try {
-      if (sessionStorage.getItem('gmc_citizen_logged_out') === 'true') {
+      if (
+        localStorage.getItem('gmc_citizen_logged_out') === 'true' ||
+        sessionStorage.getItem('gmc_citizen_logged_out') === 'true'
+      ) {
         return false;
       }
-      return true;
+      const hasAuthSession = localStorage.getItem(SESSION_AUTH_KEY) === 'true';
+      const savedUser = localStorage.getItem(STORAGE_AUTH_KEY);
+      return Boolean(hasAuthSession && savedUser);
     } catch {
-      return true;
+      return false;
     }
   });
 
-  const [currentView, setCurrentView] = useState<NavTabId>('map');
+  // Default initial view for authenticated citizens is Citizen Dashboard
+  const [currentView, setCurrentView] = useState<NavTabId>('dashboard');
   const [reports, setReports] = useState<CitizenReport[]>(INITIAL_REPORTS);
   // Persisted citizen profile
   const [user, setUser] = useState<UserProfile>(() => {
@@ -174,14 +183,32 @@ export default function App() {
   const { isOnline } = useOnlineStatus();
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Persist user changes locally & sync with Firestore
+  // Persist authenticated user changes locally & sync with Firestore
   useEffect(() => {
+    if (!isAuthenticated) return;
     try {
       localStorage.setItem(STORAGE_AUTH_KEY, JSON.stringify(user));
     } catch (e) {
       console.warn('Storage write error:', e);
     }
-  }, [user]);
+  }, [user, isAuthenticated]);
+
+  // Keep Firebase Auth session in sync across device reloads
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (fbUser) => {
+      if (fbUser) {
+        try {
+          localStorage.setItem(SESSION_AUTH_KEY, 'true');
+          localStorage.removeItem('gmc_citizen_logged_out');
+          sessionStorage.removeItem('gmc_citizen_logged_out');
+        } catch (e) {
+          console.warn('Storage sync error:', e);
+        }
+        setIsAuthenticated(true);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   // Synchronize critical city metrics to offline storage whenever updated
   useEffect(() => {
@@ -384,10 +411,14 @@ export default function App() {
     setUser(authenticatedUser);
     setIsAuthenticated(true);
     try {
-      sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+      localStorage.setItem(SESSION_AUTH_KEY, 'true');
+      localStorage.setItem(STORAGE_AUTH_KEY, JSON.stringify(authenticatedUser));
+      localStorage.removeItem('gmc_citizen_logged_out');
+      sessionStorage.removeItem('gmc_citizen_logged_out');
     } catch (e) {
-      console.warn('Session storage error:', e);
+      console.warn('Storage write error:', e);
     }
+    // Take directly to citizen dashboard on successful login
     setCurrentView('dashboard');
     playMindfulChime('karma');
 
@@ -396,7 +427,7 @@ export default function App() {
       {
         id: notifId,
         title: 'Authentic Citizen Session Active',
-        message: `Tashi Delek, ${authenticatedUser.name}! Securely connected to GMC Telemetry.`,
+        message: `Tashi Delek, ${authenticatedUser.name}! Welcome to the GMC Citizen Dashboard.`,
         time: 'Just now',
         read: false
       },
@@ -407,12 +438,16 @@ export default function App() {
   const handleLogout = () => {
     playMindfulChime('bell');
     try {
-      sessionStorage.removeItem(SESSION_AUTH_KEY);
+      localStorage.removeItem(SESSION_AUTH_KEY);
+      localStorage.removeItem(STORAGE_AUTH_KEY);
+      localStorage.setItem('gmc_citizen_logged_out', 'true');
+      sessionStorage.setItem('gmc_citizen_logged_out', 'true');
     } catch (e) {
-      console.warn('Session storage clear error:', e);
+      console.warn('Storage clear error:', e);
     }
+    auth.signOut().catch(() => {});
     setIsAuthenticated(false);
-    setCurrentView('auth');
+    setCurrentView('dashboard');
   };
 
   // Submit new report
